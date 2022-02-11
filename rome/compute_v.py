@@ -39,6 +39,12 @@ def compute_v(
 
     # Tokenize target into list of int token IDs
     target_ids = tok(request["target_new"]["str"])["input_ids"]
+    if len(target_ids) > 1:
+        print(
+            "Warning: target is not a single token. "
+            f"Multi-token targets are not well-understood. "
+            f"Unexpected results are possible."
+        )
 
     # Compute rewriting inputs and outputs
     # Special care required to handle multi-token targets
