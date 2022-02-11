@@ -1,0 +1,10 @@
+{
+    "lr_scale": 1.0,
+    "n_toks": 10,
+    "model_name": "gpt2-xl",
+    "refine": false,
+    "batch_size": 20,
+    "steps": 20,
+    "adaptive_threshold": 0.2,
+    "p": 0.4
+}
