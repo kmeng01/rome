@@ -37,31 +37,46 @@ def compute_v(
 
     print("Computing right vector (v)")
 
-    # Handle inputs
-    inp_tok = tok(
-        [request["prompt"].format(request["subject"])], return_tensors="pt"
-    ).to("cuda")
-    prompt_template_kl = "{} is a"
-    inp_kl_tok = tok(
-        [prompt_template_kl.format(request["subject"])], return_tensors="pt"
-    ).to("cuda")
+    # Tokenize target into list of int token IDs
+    target_ids = tok(request["target_new"]["str"])["input_ids"]
+    if len(target_ids) > 1:
+        print(
+            "Warning: target is not a single token. "
+            f"Multi-token targets are not well-understood. "
+            f"Unexpected results are possible."
+        )
 
-    # Get vocab ID of new target token
-    target_id = tok([request["target_new"]["str"]])["input_ids"][0][0]
+    # Compute rewriting inputs and outputs
+    # Special care required to handle multi-token targets
+    rewriting_inputs = tok(
+        [
+            request["prompt"].format(request["subject"]) + tok.decode(target_ids[:i])
+            for i in range(len(target_ids))
+        ],
+        return_tensors="pt",
+        padding=True,
+    ).to("cuda")
+    rewriting_targets = torch.tensor(target_ids).to("cuda")
+
+    # Compute KL loss inputs
+    kl_prompt_template = "{} is a"
+    kl_inputs = tok(
+        [kl_prompt_template.format(request["subject"])], return_tensors="pt"
+    ).to("cuda")
 
     # Compute indices of the tokens where the fact is looked up
     lookup_idx = find_fact_lookup_idx(
         request["prompt"], request["subject"], tok, hparams.fact_token
     )
     lookup_idx_kl = find_fact_lookup_idx(
-        prompt_template_kl, request["subject"], tok, hparams.fact_token
+        kl_prompt_template, request["subject"], tok, hparams.fact_token
     )
 
     # Finalize rewrite and loss layers
     if layer == model.config.n_layer - 1:
         layer -= 1
         print(
-            f"Note: reducing rewrite layer to {layer}. "
+            f"Reducing rewrite layer to {layer}. "
             f"Rewriting at layer {layer + 1} (the last layer) will have no effect."
         )
     print(f"Rewrite layer is {layer}")
@@ -79,9 +94,13 @@ def compute_v(
         nonlocal target_init
 
         if cur_layer == hparams.mlp_module_tmp.format(layer):
+            # Store initial value of the vector of interest
             if target_init is None:
-                print("Recording initial target vector")
+                print("Recording initial value of v*")
                 # This vector should be consistent across the batch dimension
+                assert torch.allclose(
+                    cur_out[0, lookup_idx], cur_out[:, lookup_idx].mean(0)
+                )  # TODO remove this after initial test
                 target_init = cur_out[0, lookup_idx].detach()
             cur_out[:, lookup_idx] += delta[None, :]
 
@@ -98,7 +117,9 @@ def compute_v(
         return cur_out
 
     # Optimizers
-    opt = torch.optim.Adam([delta], lr=hparams.v_lr, weight_decay=hparams.v_weight_decay)
+    opt = torch.optim.Adam(
+        [delta], lr=hparams.v_lr, weight_decay=hparams.v_weight_decay
+    )
     nethook.set_requires_grad(False, model)
 
     # Execute optimization
@@ -121,7 +142,7 @@ def compute_v(
             edit_output=edit_output_fn,
             **trace_dict_args,
         ) as tr:
-            model(**inp_tok)
+            model(**rewriting_inputs)
 
         # Forward pass of distribution consistency prompt
         with nethook.TraceDict(
@@ -129,34 +150,34 @@ def compute_v(
             edit_output=edit_output_fn_kl,
             **trace_dict_args,
         ) as _:
-            kl_logits = model(**inp_kl_tok).logits
+            kl_logits = model(**kl_inputs).logits
             kl_log_probs = torch.nn.functional.log_softmax(kl_logits[:, -1, :], dim=1)
             if kl_distr_init is None:
-                kl_distr_init = kl_log_probs.detach().requires_grad_(False)
+                kl_distr_init = kl_log_probs.detach()
+
+        # Gather output representation at last non-masked token
+        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0]
+        indices_to_gather = (
+            (rewriting_inputs["attention_mask"].sum(1) - 1)
+            .unsqueeze(1)
+            .repeat(1, full_repr.size(-1))
+            .unsqueeze(1)
+        )
+        gathered_reprs = torch.gather(full_repr, 1, indices_to_gather).squeeze(1)
 
         # Compute probability distribution over tokens @ the loss layer
-        cur_final = torch.log_softmax(
-            (
-                ln_f(
-                    tr[hparams.layer_module_tmp.format(loss_layer)]
-                    .output[0][0][-1]
-                    .unsqueeze(0)
-                )
-                @ lm_w
-                + lm_b
-            ).squeeze(),
-            dim=0,
-        )
+        log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
         # Compute value of objective function
-        l1, l2 = -cur_final[target_id], hparams.kl_factor * torch.nn.functional.kl_div(
+        l1 = -torch.gather(log_dist, 1, rewriting_targets[:, None]).mean()
+        l2 = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True
         )
         loss = l1 + l2
         print(
             f"loss {np.round(loss.item(), 3)} = {np.round(l1.item(), 3)} + {np.round(l2.item(), 3)} "
-            f"prob of [{tok.decode([target_id])}] "
-            f"{torch.exp(cur_final[target_id]).item()}"
+            f"avg prob of [{tok.decode(rewriting_targets.detach().cpu().numpy())}] "
+            f"{torch.exp(-l1).item()}"
         )
         if loss < 5e-2:
             break

@@ -28,8 +28,14 @@ def demo_model_editing(
 
     nethook.set_requires_grad(True, model)
 
-    RewritingParamsClass, apply_method, hparams_prefix, hparams_suffix = load_alg(alg_name)
-    params_name = HPARAMS_DIR / hparams_prefix / f"{model.config._name_or_path.replace('/', '_')}{hparams_suffix}.json"
+    RewritingParamsClass, apply_method, hparams_prefix, hparams_suffix = load_alg(
+        alg_name
+    )
+    params_name = (
+        HPARAMS_DIR
+        / hparams_prefix
+        / f"{model.config._name_or_path.replace('/', '_')}{hparams_suffix}.json"
+    )
 
     print_loud(f"Retrieving {alg_name} hyperparameters")
     print("Loading from", params_name)
@@ -80,7 +86,17 @@ def load_alg(alg_name):
     3. Location of parameters
     4. Predefined suffix for the param file
     """
-    assert alg_name in ["FT", "FT-L", "FT-AttnEdit", "KN", "MEND", "MEND-CF", "KE", "KE-CF", "ROME"]
+    assert alg_name in [
+        "FT",
+        "FT-L",
+        "FT-AttnEdit",
+        "KN",
+        "MEND",
+        "MEND-CF",
+        "KE",
+        "KE-CF",
+        "ROME",
+    ]
 
     if alg_name == "ROME":
         return ROMEHyperParams, apply_rome_to_model, "ROME", ""
@@ -106,7 +122,12 @@ def load_alg(alg_name):
                 "MEND",
                 "_CF",
             ),
-            "KE-CF": (EFKHyperParams, EfkRewriteExecutor().apply_to_model, "MEND", "_CF"),
+            "KE-CF": (
+                EFKHyperParams,
+                EfkRewriteExecutor().apply_to_model,
+                "MEND",
+                "_CF",
+            ),
         }
         return d[alg_name]
 
