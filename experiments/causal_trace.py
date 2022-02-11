@@ -299,15 +299,17 @@ class ModelAndTokenizer:
     of layers.
     """
 
-    def __init__(self, model_name=None, model=None, tokenizer=None,
-            low_cpu_mem_usage=False):
+    def __init__(
+        self, model_name=None, model=None, tokenizer=None, low_cpu_mem_usage=False
+    ):
         if tokenizer is None:
             assert model_name is not None
             tokenizer = AutoTokenizer.from_pretrained(model_name)
         if model is None:
             assert model_name is not None
-            model = AutoModelForCausalLM.from_pretrained(model_name,
-                    low_cpu_mem_usage=low_cpu_mem_usage)
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name, low_cpu_mem_usage=low_cpu_mem_usage
+            )
             nethook.set_requires_grad(False, model)
             model.eval().cuda()
         self.tokenizer = tokenizer

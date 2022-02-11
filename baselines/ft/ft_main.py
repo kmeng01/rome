@@ -75,14 +75,16 @@ def execute_ft(
     weights_copy = {k: v.detach().clone() for k, v in weights.items()}
 
     # Define inputs
-    inputs = tok([request["prompt"].format(request["subject"])], return_tensors="pt").to(
-        "cuda"
-    )
+    inputs = tok(
+        [request["prompt"].format(request["subject"])], return_tensors="pt"
+    ).to("cuda")
     target_id = tok([request["target_new"]["str"]])["input_ids"][0][0]
 
     # Configure optimizer / gradients
     opt = torch.optim.Adam(
-        [v for _, v in weights.items()], lr=hparams.lr, weight_decay=hparams.weight_decay
+        [v for _, v in weights.items()],
+        lr=hparams.lr,
+        weight_decay=hparams.weight_decay,
     )
     for name, w in model.named_parameters():
         w.requires_grad = name in weights.keys()
