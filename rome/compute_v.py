@@ -43,8 +43,6 @@ def compute_v(
         print("-----------")
         print(
             "Warning: target is not a single token. "
-            f"Multi-token targets are not well-understood. "
-            f"Unexpected results are possible."
         )
         print("-----------")
 
