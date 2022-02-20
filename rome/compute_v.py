@@ -169,7 +169,7 @@ def compute_v(
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
         # Compute value of objective function
-        l1 = -torch.gather(log_dist, 1, rewriting_targets[:, None]).mean()
+        l1 = -torch.gather(log_dist, 1, rewriting_targets[:, None]).sum()
         l2 = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True
         )
