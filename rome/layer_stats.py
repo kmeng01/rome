@@ -6,7 +6,7 @@ from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from util.nethook import Trace, set_requires_grad
-from util.runningstats import CombinedStat, SecondMoment, tally
+from util.runningstats import CombinedStat, tally, SecondMoment, Mean
 from .tok_dataset import (
     TokenizedDataset,
     dict_to_,
@@ -15,6 +15,10 @@ from .tok_dataset import (
 )
 
 load_dotenv()
+STAT_TYPES = {
+    "mom2": SecondMoment,
+    "mean": Mean,
+}
 
 
 def main():
@@ -31,6 +35,7 @@ def main():
     aa("--model_name", default="gpt2-xl", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"])
     aa("--dataset", default="wikipedia", choices=["wikitext", "wikipedia"])
     aa("--layers", default=[17], type=lambda x: list(map(int, x.split(","))))
+    aa("--to_collect", default=["mom2"], type=lambda x: x.split(","))
     aa("--sample_size", default=100000, type=lambda x: None if x == "all" else int(x))
     aa("--batch_tokens", default=None, type=lambda x: None if x == "any" else int(x))
     aa("--precision", default="float32", choices=["float64", "float32", "float16"])
@@ -57,6 +62,7 @@ def main():
             layer_name,
             args.stats_dir,
             args.dataset,
+            args.to_collect,
             sample_size=args.sample_size,
             precision=args.precision,
             batch_tokens=args.batch_tokens,
@@ -69,6 +75,7 @@ def layer_stats(
     layer_name,
     stats_dir,
     ds_name,
+    to_collect,
     model_name=None,
     sample_size=None,
     precision=None,
@@ -105,7 +112,7 @@ def layer_stats(
 
     stats_dir = Path(stats_dir)
     file_extension = (
-        f"{model_name}/{ds_name}_stats/{layer_name}_{precision}_cov{size_suffix}.npz"
+        f"{model_name}/{ds_name}_stats/{layer_name}_{precision}_{'-'.join(sorted(to_collect))}{size_suffix}.npz"
     )
     filename = stats_dir / file_extension
 
@@ -126,7 +133,7 @@ def layer_stats(
     if progress is None:
         progress = lambda x: x
 
-    stat = CombinedStat(mom2=SecondMoment())
+    stat = CombinedStat(**{k: STAT_TYPES[k]() for k in to_collect})
     loader = tally(
         stat,
         ds,
