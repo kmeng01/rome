@@ -143,19 +143,50 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--alg_name", choices=["ROME", "FT", "KN", "MEND", "KE"], default="ROME"
+        "--alg_name",
+        choices=["ROME", "FT", "KN", "MEND", "KE"],
+        default="ROME",
+        help="Editing algorithm to use. Results are saved in results/<alg_name>/<run_id>, "
+        "where a new run_id is generated on each run. "
+        "If continuing from previous run, specify the run_id in --continue_from_run.",
     )
     parser.add_argument(
-        "--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"], default="gpt2-xl"
-    )
-    parser.add_argument("--hparams_fname", type=str, default="gpt2-xl.json")
-    parser.add_argument("--continue_from_run", type=str, default=None)
-    parser.add_argument("--dataset_size_limit", type=int, default=10000)
-    parser.add_argument(
-        "--skip_generation_tests", dest="skip_generation_tests", action="store_true"
+        "--model_name",
+        choices=["gpt2-xl", "EleutherAI/gpt-j-6B"],
+        default="gpt2-xl",
+        help="Model to edit.",
     )
     parser.add_argument(
-        "--conserve_memory", dest="conserve_memory", action="store_true"
+        "--hparams_fname",
+        type=str,
+        default="gpt2-xl.json",
+        help="Name of hyperparameters file, located in the hparams/<alg_name> folder.",
+    )
+    parser.add_argument(
+        "--continue_from_run",
+        type=str,
+        default=None,
+        help="If continuing from previous run, set to run_id. Otherwise, leave as None.",
+    )
+    parser.add_argument(
+        "--dataset_size_limit",
+        type=int,
+        default=10000,
+        help="Truncate CounterFact to first n records.",
+    )
+    parser.add_argument(
+        "--skip_generation_tests",
+        dest="skip_generation_tests",
+        action="store_true",
+        help="Only run fast probability-based tests without slow generation tests. "
+        "Useful for quick debugging and hyperparameter sweeps.",
+    )
+    parser.add_argument(
+        "--conserve_memory",
+        dest="conserve_memory",
+        action="store_true",
+        help="Reduce memory usage during evaluation at the cost of a minor slowdown. "
+        "Backs up model weights on CPU instead of GPU.",
     )
     parser.set_defaults(skip_generation_tests=False, conserve_memory=False)
     args = parser.parse_args()
