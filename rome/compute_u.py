@@ -49,6 +49,7 @@ def get_inv_cov(
             layer_name,
             STATS_DIR,
             mom2_dataset,
+            to_collect=["mom2"],
             sample_size=mom2_n_samples,
             precision=mom2_dtype,
         )
