@@ -113,9 +113,23 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dir_name", type=str)
-    parser.add_argument("--runs", type=str, default=None)
-    parser.add_argument("--first_n_cases", type=int, default=None)
+    parser.add_argument(
+        "--dir_name", type=str, help="Name of directory to scan for runs."
+    )
+    parser.add_argument(
+        "--runs",
+        type=str,
+        default=None,
+        help="By default, summarizes each run in <dir_name>. "
+        "If runs are specified, only evaluates those specific runs.",
+    )
+    parser.add_argument(
+        "--first_n_cases",
+        type=int,
+        default=None,
+        help="Restricts evaluation to first n cases in dataset. "
+        "Useful for comparing different in-progress runs on the same slice of data.",
+    )
     args = parser.parse_args()
 
     main(

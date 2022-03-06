@@ -41,9 +41,7 @@ def compute_v(
     target_ids = tok(request["target_new"]["str"])["input_ids"]
     if len(target_ids) > 1:
         print("-----------")
-        print(
-            "Warning: target is not a single token. "
-        )
+        print("Warning: target is not a single token. ")
         print("-----------")
 
     # Compute rewriting inputs and outputs

@@ -23,7 +23,7 @@ def apply_rome_to_model(
     :param copy: If true, will preserve the original model while creating a new one to edit.
         Note that you are responsible for deallocating the new model's memory to avoid leaks.
 
-    :return: (1) the updated model, (2) the weights that changed
+    :return: (1) the updated model, (2) an original copy of the weights that changed
     """
 
     deltas = execute_rome(model, tok, request, hparams)
