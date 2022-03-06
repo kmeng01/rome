@@ -85,7 +85,7 @@ See [`baselines/`](baselines/) for a description of the available baselines.
 [`experiments/evaluate.py`](experiments/evaluate.py) can be used to evaluate any method in [`baselines/`](baselines/).
 To get started (e.g. using ROME on GPT-2 XL), run:
 ```bash
-python3 -m experiments.evaluate \ 
+python3 -m experiments.evaluate \
     --alg_name=ROME \
     --model_name=gpt2-xl \
     --hparams_fname=gpt2-xl.json
