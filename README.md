@@ -16,6 +16,8 @@ Feel free to open an issue if you find any problems; we are actively developing 
 2. [Causal Tracing](#causal-tracing)
 3. [Rank-One Model Editing (ROME)](#rank-one-model-editing-rome-1)
 4. [Evaluation](#evaluation)
+    * [Running the Full Evaluation Suite](#running-the-full-evaluation-suite)
+    * [Integrating New Editing Methods](#integrating-new-editing-methods)
 5. [How to Cite](#how-to-cite)
 
 ## Installation
@@ -71,15 +73,34 @@ Several similar examples are included in the notebook.
 
 ## Evaluation
 
-See [`baselines/README.md`](baselines/README.md) for a description of the available baselines and [`counterfact/README.md`](counterfact/README.md) for details about CounterFact.
+See [`baselines/`](baselines/) for a description of the available baselines and [`counterfact/`](counterfact/) for details about CounterFact.
 
 ### Running the Full Evaluation Suite
-An evaluation script is provided at [`experiments/evaluate.py`](experiments/evaluate.py). At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. Run `python3 -m experiments.evaluate -h` for details about command-line flags.
+An evaluation script is provided at [`experiments/evaluate.py`](experiments/evaluate.py). At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. You can run `python3 -m experiments.evaluate -h` for details about command-line flags.
 
 For example, to evaluate ROME on GPT-2 XL using [default parameters](hparams/ROME/gpt2-xl.json), run:
 ```bash
 python3 experiments.evaluate --alg_name=ROME --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
 ```
+
+This dumps results in the following format:
+```bash
+results/
+|__ ROME/
+    |__ run_000/
+        |__ params.json
+        |__ case_0.json
+        |__ case_1.json
+        |__ ...
+        |__ case_10000.json
+```
+
+To summarize the results, you can use [`experiments/summarize.py`](experiments/summarize.py):
+```bash
+python3 -m experiments.summarize --dir_name=ROME --runs=run_000
+```
+
+Again, you can run `python3 -m experiments.summarize -h` for information on the command-line flags.
 
 _Note: evaluation is currently only supported for methods that edit autoregressive HuggingFace models using the PyTorch backend. We are working on a set of general-purpose methods (usable on e.g. TensorFlow and without HuggingFace) that will be released soon._
 
