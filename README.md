@@ -15,9 +15,8 @@ Feel free to open an issue if you find any problems; we are actively developing 
 1. [Installation](#installation)
 2. [Causal Tracing](#causal-tracing)
 3. [Rank-One Model Editing (ROME)](#rank-one-model-editing-rome-1)
-4. [CounterFact Dataset](#counterfact)
-5. [Evaluation](#evaluation)
-6. [How to Cite](#how-to-cite)
+4. [Evaluation](#evaluation)
+5. [How to Cite](#how-to-cite)
 
 ## Installation
 
@@ -70,13 +69,9 @@ request = {
 
 Several similar examples are included in the notebook.
 
-## CounterFact
-
-Description coming soon!
-
 ## Evaluation
 
-See [`baselines/README.md`](baselines/README.md) for a description of the available baselines.
+See [`baselines/README.md`](baselines/README.md) for a description of the available baselines and [`counterfact/README.md`](counterfact/README.md) for details about CounterFact.
 
 ### Running the Full Evaluation Suite
 An evaluation script is provided at [`experiments/evaluate.py`](experiments/evaluate.py). At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. Run `python3 -m experiments.evaluate -h` for details about command-line flags.
@@ -86,21 +81,21 @@ For example, to evaluate ROME on GPT-2 XL using [default parameters](hparams/ROM
 python3 experiments.evaluate --alg_name=ROME --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
 ```
 
-_Note: evaluation is currently only supported for PyTorch methods that edit causal (i.e. autoregressive) HuggingFace models. We are working on a set of general-purpose methods (usable on e.g. TensorFlow and without HuggingFace) that will be released soon._
+_Note: evaluation is currently only supported for methods that edit autoregressive HuggingFace models using the PyTorch backend. We are working on a set of general-purpose methods (usable on e.g. TensorFlow and without HuggingFace) that will be released soon._
 
-## Integrating and Evaluating New Editing Methods
+### Integrating New Editing Methods
 
 <!-- Say you have a new method `X` and want to benchmark it on CounterFact. Here's a checklist for evaluating `X`:
 - The public method that evaluates a model on each CounterFact record is [`compute_rewrite_quality`](experiments/py/eval_utils.py); see [the source code](experiments/py/eval_utils.py) for details.
 - In your evaluation script, you should call `compute_rewrite_quality` once with an unedited model and once with a model that has been edited with `X`. Each time, the function returns a dictionary. -->
 
-Say you have a new method `X` and want to benchmark it on CounterFact. We already have a runner that instruments the evaluation loop at [`experiments/evaluate.py`](experiments/evaluate.py). To use it:
+Say you have a new method `X` and want to benchmark it on CounterFact. To integrate `X` with our runner:
 - Subclass [`HyperParams`](util/hparams.py) into `XHyperParams` and specify all hyperparameter fields. See [`ROMEHyperParameters`](rome/rome_hparams.py) for an example implementation.
 - Create a hyperparameters file at `hparams/X/gpt2-xl.json` and specify some default values. See [`hparams/ROME/gpt2-xl.json`](hparams/ROME/gpt2-xl.json) for an example.
 - Define a function `apply_X_to_model` which accepts several parameters and returns (i) the rewritten model and (ii) a dictionary of original weight values for ones that were edited (in the format `{weight_name: original_weight_values}`). See [`rome/rome_main.py`](rome/rome_main.py) for an example.
 - Add `X` to `ALG_DICT` in [`experiments/evaluate.py`](experiments/evaluate.py) by adding the line `"X": (XHyperParams, apply_X_to_model)`.
 
-Finally, run the main script!
+Finally, run the main script:
 ```bash
 python3 experiments.evaluate --alg_name=X --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
 ```
