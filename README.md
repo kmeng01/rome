@@ -78,21 +78,24 @@ Details coming soon!
 
 ## Evaluation
 
-See [`baselines/`](baselines/) for a description of the available baselines and [`counterfact/`](counterfact/) for details about CounterFact.
+See [`baselines/`](baselines/) for a description of the available baselines.
 
 ### Running the Full Evaluation Suite
 
 [`experiments/evaluate.py`](experiments/evaluate.py) can be used to evaluate any method in [`baselines/`](baselines/).
 To get started (e.g. using ROME on GPT-2 XL), run:
 ```bash
-python3 -m experiments.evaluate --alg_name=ROME --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
+python3 -m experiments.evaluate \ 
+    --alg_name=ROME \
+    --model_name=gpt2-xl \
+    --hparams_fname=gpt2-xl.json
 ```
 
-This script dumps its results in the following format, with one `.json` for each dataset record:
+Results from each run are stored at `results/<method_name>/run_<run_id>` in a specific format:
 ```bash
 results/
 |__ ROME/
-    |__ run_000/
+    |__ run_<run_id>/
         |__ params.json
         |__ case_0.json
         |__ case_1.json
@@ -102,10 +105,10 @@ results/
 
 To summarize the results, you can use [`experiments/summarize.py`](experiments/summarize.py):
 ```bash
-python3 -m experiments.summarize --dir_name=ROME
+python3 -m experiments.summarize --dir_name=ROME --runs=<run_id>
 ```
 
-You can run `python3 -m experiments.evaluate -h` and `python3 -m experiments.summarize -h` for information on command-line flags.
+Running `python3 -m experiments.evaluate -h` or `python3 -m experiments.summarize -h` provides details about command-line flags.
 
 _Note: evaluation is currently only supported for methods that edit autoregressive HuggingFace models using the PyTorch backend. We are working on a set of general-purpose methods (usable on e.g. TensorFlow and without HuggingFace) that will be released soon._
 
@@ -118,13 +121,17 @@ _Note: evaluation is currently only supported for methods that edit autoregressi
 Say you have a new method `X` and want to benchmark it on CounterFact. To integrate `X` with our runner:
 - Subclass [`HyperParams`](util/hparams.py) into `XHyperParams` and specify all hyperparameter fields. See [`ROMEHyperParameters`](rome/rome_hparams.py) for an example implementation.
 - Create a hyperparameters file at `hparams/X/gpt2-xl.json` and specify some default values. See [`hparams/ROME/gpt2-xl.json`](hparams/ROME/gpt2-xl.json) for an example.
-- Define a function `apply_X_to_model` which accepts several parameters and returns (i) the rewritten model and (ii) a dictionary of original weight values for ones that were edited (in the format `{weight_name: original_weight_values}`). See [`rome/rome_main.py`](rome/rome_main.py) for an example.
-- Add `X` to `ALG_DICT` in [`experiments/evaluate.py`](experiments/evaluate.py) by adding the line `"X": (XHyperParams, apply_X_to_model)`.
+- Define a function `apply_X_to_model` which accepts several parameters and returns (i) the rewritten model and (ii) the original weight values for parameters that were edited (in the format `{weight_name: original_weight_value}`). See [`rome/rome_main.py`](rome/rome_main.py) for an example.
+- Add `X` to `ALG_DICT` in [`experiments/evaluate.py`](experiments/evaluate.py) by inserting the line `"X": (XHyperParams, apply_X_to_model)`.
 
-Finally, run the main script:
+Finally, run the main scripts:
 ```bash
-python3 experiments.evaluate --alg_name=X --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
-python3 -m experiments.summarize --dir_name=X
+python3 -m experiments.evaluate \
+    --alg_name=X \
+    --model_name=gpt2-xl \
+    --hparams_fname=gpt2-xl.json
+
+python3 -m experiments.summarize --dir_name=X --runs=<run_id>
 ```
 
 <!-- 
@@ -134,8 +141,6 @@ At runtime, you must specify two command-line arguments: the method name, and th
 ```bash
 python3 -m experiments.evaluate --alg_name=ROME --hparams_fname=default.json
 ```
-
-Results from each run are stored in a directory of the form `results/<method_name>/run_<run_id>`.
 
 Running the following command will yield `dict` run summaries:
 ```bash
