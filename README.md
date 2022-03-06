@@ -78,12 +78,38 @@ Description coming soon!
 
 ### Paper Baselines
 
-We compare ROME against several state-of-the-art model editors. All are implemented in [baselines/](baselines) in their respective folders. Implementations are not our own; they are adapted slightly to plug into our evaluation system.
+We compare ROME against several open sourced state-of-the-art model editors. All are implemented in [`baselines/`](baselines) in their respective folders. Implementations are not our own; they are adapted slightly to fit our evaluation system.
 - Knowledge Neurons (KN): Dai et al. [[Code]](https://github.com/EleutherAI/knowledge-neurons) [[Paper]](https://arxiv.org/abs/2104.08696)
 - Knowledge Editor (KE): De Cao et al. [[Code]](https://github.com/eric-mitchell/mend) [[Paper]](https://arxiv.org/abs/2104.08164)
 - Model Editor Networks with Gradient Decomposition (MEND): Mitchell et al. [[Code]](https://github.com/eric-mitchell/mend) [[Paper]](https://arxiv.org/abs/2110.11309)
 
 ### Running the Full Evaluation Suite
+[`experiments/evaluate.py`](experiments/evaluate.py) contains evaluation code for all methods presented in the paper. At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. Run `python3 -m experiments.evaluate -h` for details on command-line flags.
+
+For example, if you'd like to fully evaluate ROME on GPT-2 XL using [default parameters](hparams/ROME/gpt2-xl.json), you can run:
+```bash
+python3 experiments.evaluate --alg_name=ROME --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
+```
+
+Evaluation is currently only supported for PyTorch-based methods that edit HuggingFace `AutoModelForCausalLM` models. We are working on a set of general-purpose methods (useable on e.g. TensorFlow non-HuggingFace) that will be released soon.
+
+## Integrating and Evaluating New Editing Methods
+
+<!-- Say you have a new method `X` and want to benchmark it on CounterFact. Here's a checklist for evaluating `X`:
+- The public method that evaluates a model on each CounterFact record is [`compute_rewrite_quality`](experiments/py/eval_utils.py); see [the source code](experiments/py/eval_utils.py) for details.
+- In your evaluation script, you should call `compute_rewrite_quality` once with an unedited model and once with a model that has been edited with `X`. Each time, the function returns a dictionary. -->
+
+Say you have a new method `X` and want to benchmark it on CounterFact. We already have a runner that instruments the evaluation loop at [`experiments/evaluate.py`](experiments/evaluate.py). To use it:
+- Subclass [`HyperParams`](util/hparams.py) into `XHyperParams` and specify all hyperparameter fields. See [`ROMEHyperParameters`](rome/rome_hparams.py) for an example implementation.
+- Create a hyperparameters file at `hparams/X/gpt2-xl.json` and specify some default values. See [`hparams/ROME/gpt2-xl.json`](hparams/ROME/gpt2-xl.json) for an example.
+- Define a function `apply_X_to_model` which accepts several parameters and returns (i) the rewritten model and (ii) a dictionary of original weight values for ones that were edited (in the format `{weight_name: original_weight_values}`). See [`rome/rome_main.py`](rome/rome_main.py) for an example.
+- Add `X` to `ALG_DICT` in [`experiments/evaluate.py`](experiments/evaluate.py) by adding the line `"X": (XHyperParams, apply_X_to_model)`.
+
+Finally, run the main script!
+```bash
+python3 experiments.evaluate --alg_name=X --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
+```
+
 <!-- 
 Each method is customizable through a set of hyperparameters. For ROME, they are defined in `rome/hparams.py`. At runtime, you must specify a configuration of hyperparams through a `.json` file located in `hparams/<method_name>`. Check out [`hparams/ROME/default.json`](hparams/ROME/default.json) for an example.
 
@@ -98,8 +124,6 @@ Running the following command will yield `dict` run summaries:
 ```bash
 python3 -m experiments/summarize --alg_name=ROME --run_name=run_001
 ``` -->
-
-Description coming soon!
 
 ## How to Cite
 
