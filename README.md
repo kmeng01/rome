@@ -76,22 +76,17 @@ Description coming soon!
 
 ## Evaluation
 
-### Paper Baselines
-
-We compare ROME against several open sourced state-of-the-art model editors. All are implemented in [`baselines/`](baselines) in their respective folders. Implementations are not our own; they are adapted slightly to fit our evaluation system.
-- Knowledge Neurons (KN): Dai et al. [[Code]](https://github.com/EleutherAI/knowledge-neurons) [[Paper]](https://arxiv.org/abs/2104.08696)
-- Knowledge Editor (KE): De Cao et al. [[Code]](https://github.com/eric-mitchell/mend) [[Paper]](https://arxiv.org/abs/2104.08164)
-- Model Editor Networks with Gradient Decomposition (MEND): Mitchell et al. [[Code]](https://github.com/eric-mitchell/mend) [[Paper]](https://arxiv.org/abs/2110.11309)
+See [`baselines/README.md`](baselines/README.md) for a description of the available baselines.
 
 ### Running the Full Evaluation Suite
-[`experiments/evaluate.py`](experiments/evaluate.py) contains evaluation code for all methods presented in the paper. At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. Run `python3 -m experiments.evaluate -h` for details on command-line flags.
+An evaluation script is provided at [`experiments/evaluate.py`](experiments/evaluate.py). At a high level, it auto-loads required evaluation materials, iterates through each record in the dataset, and dumps results for each run in a `.json`. Run `python3 -m experiments.evaluate -h` for details about command-line flags.
 
-For example, if you'd like to fully evaluate ROME on GPT-2 XL using [default parameters](hparams/ROME/gpt2-xl.json), you can run:
+For example, to evaluate ROME on GPT-2 XL using [default parameters](hparams/ROME/gpt2-xl.json), run:
 ```bash
 python3 experiments.evaluate --alg_name=ROME --model_name=gpt2-xl --hparams_fname=gpt2-xl.json
 ```
 
-Evaluation is currently only supported for PyTorch-based methods that edit HuggingFace `AutoModelForCausalLM` models. We are working on a set of general-purpose methods (useable on e.g. TensorFlow non-HuggingFace) that will be released soon.
+_Note: evaluation is currently only supported for PyTorch methods that edit causal (i.e. autoregressive) HuggingFace models. We are working on a set of general-purpose methods (usable on e.g. TensorFlow and without HuggingFace) that will be released soon._
 
 ## Integrating and Evaluating New Editing Methods
 
