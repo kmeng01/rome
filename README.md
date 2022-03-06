@@ -105,7 +105,7 @@ results/
 
 To summarize the results, you can use [`experiments/summarize.py`](experiments/summarize.py):
 ```bash
-python3 -m experiments.summarize --dir_name=ROME --runs=<run_id>
+python3 -m experiments.summarize --dir_name=ROME --runs=run_<run_id>
 ```
 
 Running `python3 -m experiments.evaluate -h` or `python3 -m experiments.summarize -h` provides details about command-line flags.
@@ -129,7 +129,7 @@ python3 -m experiments.evaluate \
     --model_name=gpt2-xl \
     --hparams_fname=gpt2-xl.json
 
-python3 -m experiments.summarize --dir_name=X --runs=<run_id>
+python3 -m experiments.summarize --dir_name=X --runs=run_<run_id>
 ```
 
 ### Note on Cross-Platform Compatibility
