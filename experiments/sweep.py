@@ -1,6 +1,7 @@
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
 import json
-from typing import Dict, List
+from typing import List
 
 from experiments.evaluate import main as eval_main
 from experiments.evaluate import HPARAMS_DIR, ALG_DICT
@@ -29,9 +30,13 @@ def main(
         with open(tmp_params_path, "w") as f:
             json.dump(data, f)
 
+        model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
+        tok = AutoTokenizer.from_pretrained(model_name)
+        tok.pad_token = tok.eos_token
+
         eval_main(
             alg_name,
-            model_name,
+            model_name=(model, tok),
             hparams_fname=TMP_PARAMS_NAME.format(parallel_id),
             dataset_size_limit=num_records,
             continue_from_run=None,
@@ -57,9 +62,8 @@ if __name__ == "__main__":
         "--use_generation_tests", dest="skip_generation_tests", action="store_false"
     )
     parser.set_defaults(skip_generation_tests=True)
-    # Hack; avoids conflicts when simultaenously running
-    # multiple of the same type of sweep
-    parser.add_argument("--parallel_id", type=int)
+    # Hack; avoids conflicts when simultaenously running multiple sweeps
+    parser.add_argument("--parallel_id", type=int, default=0)
 
     args = parser.parse_args()
 
