@@ -291,6 +291,18 @@ class Mean(Stat):
         )
 
 
+class NormMean(Mean):
+    """
+    Running average of the norm of input vectors
+    """
+
+    def __init__(self, state=None):
+        super().__init__(state)
+
+    def add(self, a):
+        super().add(a.norm(dim=-1))
+
+
 class Variance(Stat):
     """
     Running computation of mean and variance. Use this when you just need
