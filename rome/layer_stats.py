@@ -153,11 +153,11 @@ def layer_stats(
             for batch in batch_group:
                 batch = dict_to_(batch, "cuda")
                 with Trace(
-                    model, layer_name, retain_input=True, retain_output=False, stop=True
+                    model, layer_name, retain_input=True, retain_output=True, stop=True
                 ) as tr:
                     model(**batch)
-                feats = flatten_masked_batch(tr.input, batch["attention_mask"])
-                # feats = flatten_masked_batch(tr.output, batch["attention_mask"])
+                # feats = flatten_masked_batch(tr.input, batch["attention_mask"])
+                feats = flatten_masked_batch(tr.output, batch["attention_mask"])
                 feats = feats.to(dtype=dtype)
                 stat.add(feats)
     return stat
