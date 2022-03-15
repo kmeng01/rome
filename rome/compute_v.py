@@ -115,9 +115,7 @@ def compute_v(
         return cur_out
 
     # Optimizers
-    opt = torch.optim.Adam(
-        [delta], lr=hparams.v_lr, weight_decay=hparams.v_weight_decay
-    )
+    opt = torch.optim.Adam([delta], lr=hparams.v_lr)
     nethook.set_requires_grad(False, model)
 
     # Execute optimization
@@ -167,15 +165,23 @@ def compute_v(
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
         # Compute value of objective function
-        l1 = -torch.gather(log_dist, 1, rewriting_targets[:, None]).sum()
-        l2 = hparams.kl_factor * torch.nn.functional.kl_div(
+        nll_loss = -torch.gather(log_dist, 1, rewriting_targets[:, None]).sum()
+        kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True
         )
-        loss = l1 + l2
+        weight_decay = (
+            hparams.v_weight_decay
+            * torch.clamp(
+                torch.norm(delta + target_init) / torch.norm(target_init), min=1.0
+            )
+            ** 2
+        )
+        # weight_decay = hparams.v_weight_decay * torch.norm(delta) ** 2
+        loss = nll_loss + kl_loss + weight_decay
         print(
-            f"loss {np.round(loss.item(), 3)} = {np.round(l1.item(), 3)} + {np.round(l2.item(), 3)} "
+            f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
             f"avg prob of [{tok.decode(rewriting_targets.detach().cpu().numpy())}] "
-            f"{torch.exp(-l1).item()}"
+            f"{torch.exp(-nll_loss).item()}"
         )
         if loss < 5e-2:
             break
@@ -186,9 +192,10 @@ def compute_v(
 
     target = target_init + delta
 
-    # Retrieve `x`, the current input to the 2nd MLP layer, and
-    # `current`, the original output of the 2nd MLP layer.
-    x, current = get_module_input_output_at_word(
+    # Retrieve cur_input, the current input to the 2nd MLP layer, and
+    # cur_output, the original output of the 2nd MLP layer.
+    # TODO cur_output is redundant with target_init
+    cur_input, cur_output = get_module_input_output_at_word(
         model,
         tok,
         layer,
@@ -199,9 +206,12 @@ def compute_v(
     )
 
     # Solving the linear system to compute the right vector
-    right_vector = (target - current) / torch.dot(x, left_vector)
-    print(f"Representation norm delta: {(target - current).norm().item()}")
-    print(f"Division Factor: {torch.dot(x, left_vector).item()}")
+    right_vector = (target - cur_output) / torch.dot(cur_input, left_vector)
+    print(f"Delta norm: {(target - cur_output).norm().item()}")
+    print(
+        f"Change in target norm: {target_init.norm().item()} to {target.norm().item()} => {(target.norm() - target_init.norm()).item()}"
+    )
+    print(f"Division Factor: {torch.dot(cur_input, left_vector).item()}")
 
     # Clamping hack to avoid catastrophe
     right_vector *= min(right_vector.norm().item(), MAX_NORM) / right_vector.norm()
@@ -221,8 +231,8 @@ def get_module_input_output_at_word(
     fact_token_strategy: str,
 ) -> Tuple[torch.Tensor]:
     """
-    Retrieves representations for a word at the input and output of a
-    particular layer module.
+    Retrieves detached representations for a word at the input and
+    output of a particular layer module.
     """
 
     word_repr_args = dict(
@@ -256,7 +266,7 @@ def get_module_input_output_at_word(
     else:
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")
 
-    return l_input, l_output
+    return l_input.detach(), l_output.detach()
 
 
 def find_fact_lookup_idx(
