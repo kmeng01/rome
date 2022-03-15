@@ -169,8 +169,12 @@ def compute_v(
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True
         )
-        weight_decay = hparams.v_weight_decay * (
-            torch.norm(delta) / torch.norm(target_init) ** 2
+        weight_decay = (
+            hparams.v_weight_decay
+            * torch.clamp(
+                torch.norm(delta + target_init) / torch.norm(target_init), min=1.0
+            )
+            ** 2
         )
         # weight_decay = hparams.v_weight_decay * torch.norm(delta) ** 2
         loss = nll_loss + kl_loss + weight_decay
