@@ -1066,7 +1066,7 @@ class Quantile(Stat):
             if ff == 0:
                 continue
             summary[:, index : index + ff] = self.data[level][:, :ff]
-            weights[index : index + ff] = 2.0**level
+            weights[index : index + ff] = 2.0 ** level
             index += ff
         assert index == summary.shape[1]
         if sort:
@@ -1113,7 +1113,7 @@ class Quantile(Stat):
             if ff == 0:
                 continue
             result.append(
-                torch.sum(fun(self.data[level][:, :ff]) * (2.0**level), dim=-1)
+                torch.sum(fun(self.data[level][:, :ff]) * (2.0 ** level), dim=-1)
             )
         if len(result) == 0:
             return None

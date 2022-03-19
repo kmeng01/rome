@@ -39,7 +39,7 @@ def scr():
 
 def uuid(digits=4):
     if not hasattr(uuid, "uuid_value"):
-        uuid.uuid_value = struct.unpack("I", os.urandom(4))[0] % int(10**digits)
+        uuid.uuid_value = struct.unpack("I", os.urandom(4))[0] % int(10 ** digits)
 
     return uuid.uuid_value
 

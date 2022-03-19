@@ -176,7 +176,7 @@ class MLP(nn.Module):
                         if layer.weight.shape[0] == layer.weight.shape[1]:
                             layer.weight.data = torch.eye(hidden_dim)
                     else:
-                        gain = 3**0.5 if (layer is layers[-1]) else 1.0
+                        gain = 3 ** 0.5 if (layer is layers[-1]) else 1.0
                         nn.init.xavier_uniform_(layer.weight, gain=gain)
 
                     layer.bias.data[:] = 0

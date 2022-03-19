@@ -132,14 +132,17 @@ def compute_u(
     # Apply covariance estimate
     u = cur_repr
     if hparams.mom2_adjustment:
-        u = get_inv_cov(
-            model,
-            tok,
-            hparams.rewrite_module_tmp.format(layer),
-            hparams.mom2_dataset,
-            hparams.mom2_n_samples,
-            hparams.mom2_dtype,
-        ) @ u.unsqueeze(1)
+        u = (
+            get_inv_cov(
+                model,
+                tok,
+                hparams.rewrite_module_tmp.format(layer),
+                hparams.mom2_dataset,
+                hparams.mom2_n_samples,
+                hparams.mom2_dtype,
+            )
+            @ u.unsqueeze(1)
+        )
         u = u.squeeze()
 
     return u / u.norm()

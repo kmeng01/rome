@@ -10,7 +10,7 @@ from util import nethook
 def apply_ft_to_model(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    request: Dict,
+    requests: List[Dict],
     hparams: FTHyperParams,
     copy=False,
     return_orig_weights=False,
@@ -24,19 +24,20 @@ def apply_ft_to_model(
     :return: (1) the updated model, (2) the weights that changed
     """
 
-    deltas = execute_ft(model, tok, request, hparams)
+    weights_copy = {}
     if copy:
         model = deepcopy(model)
 
-    weights_copy = {}
-
     with torch.no_grad():
-        for w_name, upd_matrix in deltas.items():
-            w = nethook.get_parameter(model, w_name)
-            if return_orig_weights:
-                weights_copy[w_name] = w.detach().clone()
+        for request in requests:
+            deltas = execute_ft(model, tok, request, hparams)
+            
+            for w_name, upd_matrix in deltas.items():
+                w = nethook.get_parameter(model, w_name)
+                if return_orig_weights and w_name not in weights_copy:
+                    weights_copy[w_name] = w.detach().clone()
 
-            w[...] += upd_matrix
+                w[...] += upd_matrix
 
     print(f"New weights successfully inserted into {list(deltas.keys())}")
 
