@@ -4,6 +4,7 @@ import shutil
 import torch
 from pathlib import Path
 from time import time
+from typing import Union, Tuple
 
 from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -42,7 +43,7 @@ ALG_DICT = {
 
 def main(
     alg_name: str,
-    model_name: str,
+    model_name: Union[str, Tuple],
     hparams_fname: str,
     dataset_size_limit: int,
     continue_from_run: str,
@@ -89,9 +90,12 @@ def main(
 
     # Instantiate vanilla model
     print("Instantiating model")
-    model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
-    tok = AutoTokenizer.from_pretrained(model_name)
-    tok.pad_token = tok.eos_token
+    if type(model_name) is str:
+        model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
+        tok = AutoTokenizer.from_pretrained(model_name)
+        tok.pad_token = tok.eos_token
+    else:
+        model, tok = model_name
 
     # Iterate through dataset
     for record in ds:

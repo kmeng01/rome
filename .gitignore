@@ -2,6 +2,7 @@
 results
 data
 weights/
+*_tmp_*_.json
 
 # Mac specific
 .idea
