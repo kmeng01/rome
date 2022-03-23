@@ -172,7 +172,7 @@ def compute_v(
         weight_decay = (
             hparams.v_weight_decay
             * torch.clamp(
-                torch.norm(delta + target_init) / torch.norm(target_init), min=1.0
+                torch.norm(delta) / torch.norm(target_init), min=1.0
             )
             ** 2
         )
