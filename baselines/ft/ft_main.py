@@ -28,10 +28,10 @@ def apply_ft_to_model(
     if copy:
         model = deepcopy(model)
 
-    with torch.no_grad():
-        for request in requests:
-            deltas = execute_ft(model, tok, request, hparams)
-            
+    for request in requests:
+        deltas = execute_ft(model, tok, request, hparams)
+        
+        with torch.no_grad():
             for w_name, upd_matrix in deltas.items():
                 w = nethook.get_parameter(model, w_name)
                 if return_orig_weights and w_name not in weights_copy:
