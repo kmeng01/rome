@@ -16,7 +16,7 @@ HPARAMS_DIR = Path(os.getenv("HPARAMS_DIR"))
 def demo_model_editing(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    request: Dict,
+    requests: List[Dict],
     generation_prompts: List[str],
     alg_name: str = "ROME",
 ) -> Tuple[AutoModelForCausalLM, Dict[str, torch.Tensor]]:
@@ -48,7 +48,7 @@ def demo_model_editing(
 
     print_loud(f"Applying {alg_name} to model")
     model_new, orig_weights = apply_method(
-        model, tok, request, hparams, return_orig_weights=True
+        model, tok, requests, hparams, return_orig_weights=True
     )
 
     print_loud("Generating post-update text")
@@ -157,3 +157,12 @@ def print_loud(x, pad=3):
     )
     print("#" + "".join([" " for _ in range(n + 2 * (pad - 1))]) + "#")
     print("".join(["#" for _ in range(n + 2 * pad)]))
+
+
+class StopExecution(Exception):
+    def _render_traceback_(self):
+        pass
+
+
+def stop_execution():
+    raise StopExecution

@@ -30,12 +30,12 @@ def apply_rome_to_model(
     if copy:
         model = deepcopy(model)
 
-    with torch.no_grad():
-        # Iterates through rewrites in arbitrary order.
-        # TODO Research question: is this optimal?
-        for request in requests:
-            deltas = execute_rome(model, tok, request, hparams)
+    # Iterates through rewrites in arbitrary order.
+    # TODO Research question: is this optimal?
+    for request in requests:
+        deltas = execute_rome(model, tok, request, hparams)
 
+        with torch.no_grad():
             for w_name, (delta_u, delta_v) in deltas.items():
                 upd_matrix = delta_u.unsqueeze(1) @ delta_v.unsqueeze(0)
                 w = nethook.get_parameter(model, w_name)
