@@ -85,7 +85,7 @@ def make_padded_batch(items):
     if max_len == 0:
         return {k: torch.zeros((0, 0), dtype=torch.long) for k in items[0]}
     return {
-        k: pad_sequence([d[k] for d in items if len(d["input_ids"])])
+        k: pad_sequence([d[k] for d in items if len(d["input_ids"])], batch_first=True)
         for k, v in items[0].items()
     }
 
