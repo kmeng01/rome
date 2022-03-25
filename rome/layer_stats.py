@@ -41,6 +41,7 @@ def main():
     aa("--batch_tokens", default=None, type=lambda x: None if x == "any" else int(x))
     aa("--precision", default="float32", choices=["float64", "float32", "float16"])
     aa("--stats_dir", default=os.getenv("STATS_DIR"))
+    aa("--download", default=1, type=int, choices=[0, 1])
     args = parser.parse_args()
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -67,6 +68,7 @@ def main():
             sample_size=args.sample_size,
             precision=args.precision,
             batch_tokens=args.batch_tokens,
+            download=args.download,
         )
 
 
@@ -81,6 +83,7 @@ def layer_stats(
     sample_size=None,
     precision=None,
     batch_tokens=None,
+    download=True,
     progress=tqdm,
 ):
     """
@@ -115,7 +118,7 @@ def layer_stats(
     file_extension = f"{model_name}/{ds_name}_stats/{layer_name}_{precision}_{'-'.join(sorted(to_collect))}{size_suffix}.npz"
     filename = stats_dir / file_extension
 
-    if not filename.exists():
+    if not filename.exists() and download:
         remote_url = f"https://rome.baulab.info/data/stats/{file_extension}"
         try:
             print(f"Attempting to download {file_extension} from {remote_url}.")
