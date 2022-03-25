@@ -157,3 +157,12 @@ def print_loud(x, pad=3):
     )
     print("#" + "".join([" " for _ in range(n + 2 * (pad - 1))]) + "#")
     print("".join(["#" for _ in range(n + 2 * pad)]))
+
+
+class StopExecution(Exception):
+    def _render_traceback_(self):
+        pass
+
+
+def stop_execution():
+    raise StopExecution
