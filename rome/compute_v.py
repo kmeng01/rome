@@ -9,7 +9,7 @@ from util import nethook
 
 from .rome_hparams import ROMEHyperParams
 
-MAX_NORM = 500
+MAX_NORM = 100000
 
 
 def compute_v(

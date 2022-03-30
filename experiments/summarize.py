@@ -88,6 +88,9 @@ def main(
                     ):  # Generation may have been skipped during eval
                         cur_sum[f"{prefix}_{key}"].append(data[prefix][key])
 
+        if len(cur_sum) == 0:
+            continue
+
         num_items = len(cur_sum[next(iter(cur_sum.keys()))])
         metadata = {
             "run_dir": str(run_dir),
