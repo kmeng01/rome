@@ -23,16 +23,16 @@ def main(
     with open(HPARAMS_DIR / alg_name / hparams_fname, "r") as f:
         data = json.load(f)
 
+    model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
+    tok = AutoTokenizer.from_pretrained(model_name)
+    tok.pad_token = tok.eos_token
+
     # Execute sweep
     tmp_params_path = HPARAMS_DIR / alg_name / TMP_PARAMS_NAME.format(parallel_id)
     for val in sweep_vals:
         data[sweep_key] = val
         with open(tmp_params_path, "w") as f:
             json.dump(data, f)
-
-        model = AutoModelForCausalLM.from_pretrained(model_name).cuda()
-        tok = AutoTokenizer.from_pretrained(model_name)
-        tok.pad_token = tok.eos_token
 
         eval_main(
             alg_name,
