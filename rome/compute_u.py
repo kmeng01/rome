@@ -1,19 +1,17 @@
 import os
-from pathlib import Path
-from typing import Dict
-
 import torch
+from pathlib import Path
+from typing import Dict, List
 from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from rome import repr_tools
-from util.generate import generate_fast
+
 
 from .layer_stats import layer_stats
 from .rome_hparams import ROMEHyperParams
 
 # Cache variables
 inv_mom2_cache = {}
-context_templates_cache = None
 
 # Load directory configurations
 load_dotenv()
@@ -66,11 +64,11 @@ def compute_u(
     request: Dict,
     hparams: ROMEHyperParams,
     layer: int,
+    context_templates: List[str],
 ) -> torch.Tensor:
     """
     Computes the right vector used in constructing the rank-1 update matrix.
     """
-    global context_templates_cache
 
     print("Computing left vector (u)...")
 
@@ -85,26 +83,6 @@ def compute_u(
     if hparams.fact_token == "subject_last":
         # Sample some prefixes to get the contextual embedding of subject
         word = request["subject"]
-        # context_templates = ["{}"]
-        if context_templates_cache is None:
-            context_templates_cache = [
-                x + " {}"
-                for x in sum(
-                    (
-                        generate_fast(
-                            model,
-                            tok,
-                            ["The"],
-                            n_gen_per_prompt=n_gen,
-                            max_out_len=length,
-                        )
-                        for length, n_gen in [(2, 20), (5, 20), (10, 10)]
-                    ),
-                    [],
-                )
-            ] + ["{}"]
-
-            print(f"Cached context templates {context_templates_cache}")
 
         print(f"Selected u projection token {word}")
         cur_repr = torch.stack(
@@ -112,7 +90,7 @@ def compute_u(
                 repr_tools.get_repr_at_word_last_token(
                     context_template=templ, word=word, **word_repr_args
                 )
-                for templ in context_templates_cache
+                for templ in context_templates
             ],
             dim=0,
         ).mean(0)
@@ -129,7 +107,7 @@ def compute_u(
     else:
         raise ValueError(f"fact_token={hparams.fact_token} not recognized")
 
-    # Apply covariance estimate
+    # Apply inverse second moment adjustment
     u = cur_repr
     if hparams.mom2_adjustment:
         u = get_inv_cov(

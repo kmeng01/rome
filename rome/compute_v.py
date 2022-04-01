@@ -1,6 +1,4 @@
-from cgitb import lookup
-from typing import Dict, Tuple
-
+from typing import Dict, Tuple, List
 import numpy as np
 from rome import repr_tools
 import torch
@@ -8,8 +6,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from util import nethook
 
 from .rome_hparams import ROMEHyperParams
-
-MAX_NORM = 100000
 
 
 def compute_v(
@@ -19,6 +15,7 @@ def compute_v(
     hparams: ROMEHyperParams,
     layer: int,
     left_vector: torch.Tensor,
+    context_templates: List[str],
 ) -> torch.Tensor:
     """
     Computes the value (right) vector for the rank-1 update.
@@ -39,10 +36,6 @@ def compute_v(
 
     # Tokenize target into list of int token IDs
     target_ids = tok(request["target_new"]["str"])["input_ids"]
-    if len(target_ids) > 1:
-        print("-----------")
-        print("Warning: target is not a single token. ")
-        print("-----------")
 
     # Compute rewriting inputs and outputs
     # Special care required to handle multi-token targets
@@ -208,10 +201,6 @@ def compute_v(
         f"Change in target norm: {target_init.norm().item()} to {target.norm().item()} => {(target.norm() - target_init.norm()).item()}"
     )
     print(f"Division Factor: {torch.dot(cur_input, left_vector).item()}")
-
-    # Clamping hack to avoid catastrophe
-    right_vector *= min(right_vector.norm().item(), MAX_NORM) / right_vector.norm()
-
     print(f"Right vector norm: {right_vector.norm()}")
 
     return right_vector
