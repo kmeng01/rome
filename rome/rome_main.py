@@ -152,11 +152,11 @@ def get_context_templates(model, tok):
                     generate_fast(
                         model,
                         tok,
-                        ["The"],
+                        ["<|endoftext|>"],
                         n_gen_per_prompt=n_gen,
                         max_out_len=length,
                     )
-                    for length, n_gen in [(2, 20), (5, 20), (10, 10)]
+                    for length, n_gen in [(5, 20), (10, 20)]
                 ),
                 [],
             )
