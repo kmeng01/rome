@@ -1,4 +1,5 @@
 from typing import Dict, Tuple, List
+from matplotlib.style import context
 import numpy as np
 from rome import repr_tools
 import torch
@@ -39,9 +40,13 @@ def compute_v(
 
     # Compute rewriting inputs and outputs
     # Special care required to handle multi-token targets
+    rewriting_prompts = [
+        context.format(request["prompt"]) for context in context_templates
+    ]
     rewriting_inputs = tok(
         [
-            request["prompt"].format(request["subject"]) + tok.decode(target_ids[:i])
+            prompt.format(request["subject"]) + tok.decode(target_ids[:i])
+            for prompt in rewriting_prompts
             for i in range(len(target_ids))
         ],
         return_tensors="pt",
@@ -56,9 +61,11 @@ def compute_v(
     ).to("cuda")
 
     # Compute indices of the tokens where the fact is looked up
-    lookup_idx = find_fact_lookup_idx(
-        request["prompt"], request["subject"], tok, hparams.fact_token
-    )
+    lookup_idxs = [
+        find_fact_lookup_idx(prompt, request["subject"], tok, hparams.fact_token)
+        for prompt in rewriting_prompts
+        for _ in range(len(target_ids))
+    ]
     lookup_idx_kl = find_fact_lookup_idx(
         kl_prompt_template, request["subject"], tok, hparams.fact_token
     )
@@ -88,12 +95,11 @@ def compute_v(
             # Store initial value of the vector of interest
             if target_init is None:
                 print("Recording initial value of v*")
-                # This vector should be consistent across the batch dimension
-                assert torch.allclose(
-                    cur_out[0, lookup_idx], cur_out[:, lookup_idx].mean(0)
-                )  # TODO remove this after initial test
-                target_init = cur_out[0, lookup_idx].detach()
-            cur_out[:, lookup_idx] += delta[None, :]
+                # Initial value is recorded for the clean sentence
+                target_init = cur_out[0, lookup_idxs[0]].detach()
+
+            for i, idx in enumerate(lookup_idxs):
+                cur_out[i, idx, :] += delta
 
         return cur_out
 
@@ -157,8 +163,12 @@ def compute_v(
         # Compute probability distribution over tokens @ the loss layer
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
-        # Compute value of objective function
-        nll_loss = -torch.gather(log_dist, 1, rewriting_targets[:, None]).sum()
+        # Compute value of objective functions
+        nll_loss_each = -torch.gather(
+            log_dist, 1, rewriting_targets.repeat(log_dist.size(0), 1)
+        )
+        # print(torch.exp(-nll_loss_each))
+        nll_loss = nll_loss_each.sum()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True
         )
@@ -170,14 +180,24 @@ def compute_v(
         print(
             f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
             f"avg prob of [{tok.decode(rewriting_targets.detach().cpu().numpy())}] "
-            f"{torch.exp(-nll_loss).item()}"
+            f"{torch.exp(-nll_loss_each).mean().item()}"
         )
         if loss < 5e-2:
+            break
+
+        if it == hparams.v_num_grad_steps - 1:
             break
 
         # Backpropagate
         loss.backward()
         opt.step()
+
+        # Project within L2 ball
+        # TODO move this into parameters
+        MAX_NORM = 100
+        if delta.norm() > MAX_NORM:
+            with torch.no_grad():
+                delta[...] = delta * MAX_NORM / delta.norm()
 
     target = target_init + delta
 

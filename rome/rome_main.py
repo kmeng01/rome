@@ -145,7 +145,7 @@ def get_context_templates(model, tok):
     global CONTEXT_TEMPLATES_CACHE
 
     if CONTEXT_TEMPLATES_CACHE is None:
-        CONTEXT_TEMPLATES_CACHE = [
+        CONTEXT_TEMPLATES_CACHE = ["{}"] + [
             x + ". {}"
             for x in sum(
                 (
@@ -160,7 +160,7 @@ def get_context_templates(model, tok):
                 ),
                 [],
             )
-        ] + ["{}"]
+        ]
 
         print(f"Cached context templates {CONTEXT_TEMPLATES_CACHE}")
 
