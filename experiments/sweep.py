@@ -17,7 +17,7 @@ def main(
     sweep_vals: List,
     num_records: int,
     skip_generation_tests: bool,
-    parallel_id: int,
+    parallel_id: str,
 ):
     # Get current parameters
     with open(HPARAMS_DIR / alg_name / hparams_fname, "r") as f:
@@ -52,18 +52,18 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--alg_name", choices=["ROME", "FT"])
-    parser.add_argument("--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"])
-    parser.add_argument("--hparams_fname", type=str)
-    parser.add_argument("--sweep_key", type=str)
-    parser.add_argument("--sweep_vals", type=lambda x: list(map(float, x.split(","))))
+    parser.add_argument("--alg_name", choices=["ROME", "FT"], required=True)
+    parser.add_argument("--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"], required=True)
+    parser.add_argument("--hparams_fname", type=str, required=True)
+    parser.add_argument("--sweep_key", type=str, required=True)
+    parser.add_argument("--sweep_vals", type=lambda x: list(map(float, x.split(","))), required=True)
     parser.add_argument("--num_records", type=int, default=50)
     parser.add_argument(
         "--use_generation_tests", dest="skip_generation_tests", action="store_false"
     )
     parser.set_defaults(skip_generation_tests=True)
-    # Hack; avoids conflicts when simultaenously running multiple sweeps
-    parser.add_argument("--parallel_id", type=int, default=0)
+    # Must be unique to prevent conflicts when simultaenously running multiple sweeps
+    parser.add_argument("--parallel_id", type=str, required=True)
 
     args = parser.parse_args()
 

@@ -153,18 +153,21 @@ if __name__ == "__main__":
         help="Editing algorithm to use. Results are saved in results/<alg_name>/<run_id>, "
         "where a new run_id is generated on each run. "
         "If continuing from previous run, specify the run_id in --continue_from_run.",
+        required=True,
     )
     parser.add_argument(
         "--model_name",
         choices=["gpt2-xl", "EleutherAI/gpt-j-6B"],
         default="gpt2-xl",
         help="Model to edit.",
+        required=True,
     )
     parser.add_argument(
         "--hparams_fname",
         type=str,
         default="gpt2-xl.json",
         help="Name of hyperparameters file, located in the hparams/<alg_name> folder.",
+        required=True
     )
     parser.add_argument(
         "--continue_from_run",
