@@ -53,10 +53,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--alg_name", choices=["ROME", "FT"], required=True)
-    parser.add_argument("--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"], required=True)
+    parser.add_argument(
+        "--model_name", choices=["gpt2-xl", "EleutherAI/gpt-j-6B"], required=True
+    )
     parser.add_argument("--hparams_fname", type=str, required=True)
     parser.add_argument("--sweep_key", type=str, required=True)
-    parser.add_argument("--sweep_vals", type=lambda x: list(map(float, x.split(","))), required=True)
+    parser.add_argument(
+        "--sweep_vals", type=lambda x: list(map(float, x.split(","))), required=True
+    )
     parser.add_argument("--num_records", type=int, default=50)
     parser.add_argument(
         "--use_generation_tests", dest="skip_generation_tests", action="store_false"

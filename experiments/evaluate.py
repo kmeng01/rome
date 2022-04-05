@@ -167,7 +167,7 @@ if __name__ == "__main__":
         type=str,
         default="gpt2-xl.json",
         help="Name of hyperparameters file, located in the hparams/<alg_name> folder.",
-        required=True
+        required=True,
     )
     parser.add_argument(
         "--continue_from_run",
