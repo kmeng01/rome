@@ -62,9 +62,11 @@ def compute_v(
 
     # Compute indices of the tokens where the fact is looked up
     lookup_idxs = [
-        find_fact_lookup_idx(prompt, request["subject"], tok, hparams.fact_token)
-        for prompt in rewriting_prompts
-        for _ in range(len(target_ids))
+        find_fact_lookup_idx(
+            prompt, request["subject"], tok, hparams.fact_token, verbose=(i == j == 0)
+        )
+        for i, prompt in enumerate(rewriting_prompts)
+        for j in range(len(target_ids))
     ]
     lookup_idx_kl = find_fact_lookup_idx(
         kl_prompt_template, request["subject"], tok, hparams.fact_token
@@ -193,11 +195,10 @@ def compute_v(
         opt.step()
 
         # Project within L2 ball
-        # TODO move this into parameters
-        MAX_NORM = 100
-        if delta.norm() > MAX_NORM:
+        max_norm = 5 * target_init.norm()
+        if delta.norm() > max_norm:
             with torch.no_grad():
-                delta[...] = delta * MAX_NORM / delta.norm()
+                delta[...] = delta * max_norm / delta.norm()
 
     target = target_init + delta
 
@@ -275,7 +276,11 @@ def get_module_input_output_at_word(
 
 
 def find_fact_lookup_idx(
-    prompt: str, subject: str, tok: AutoTokenizer, fact_token_strategy: str
+    prompt: str,
+    subject: str,
+    tok: AutoTokenizer,
+    fact_token_strategy: str,
+    verbose=True,
 ) -> int:
     """
     Computes hypothesized fact lookup index given a sentence and subject.
@@ -294,9 +299,10 @@ def find_fact_lookup_idx(
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")
 
     sentence = prompt.format(subject)
-    print(
-        f"Lookup index found: {ret} | Sentence: {sentence} | Token:",
-        tok.decode(tok(sentence)["input_ids"][ret]),
-    )
+    if verbose:
+        print(
+            f"Lookup index found: {ret} | Sentence: {sentence} | Token:",
+            tok.decode(tok(sentence)["input_ids"][ret]),
+        )
 
     return ret

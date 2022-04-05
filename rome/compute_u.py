@@ -84,9 +84,9 @@ def compute_u(
         # Sample some prefixes to get the contextual embedding of subject
         word = request["subject"]
 
-        print(f"Selected u projection token {word}")
+        print(f"Selected u projection object {word}")
         cur_repr = torch.stack(
-            [  # TODO batch this to drastically improve performance
+            [  # TODO batch this to improve performance
                 repr_tools.get_repr_at_word_last_token(
                     context_template=templ, word=word, **word_repr_args
                 )
