@@ -172,7 +172,7 @@ def compute_v(
         # print(torch.exp(-nll_loss_each))
         nll_loss = nll_loss_each.sum()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
-            kl_distr_init, kl_log_probs, log_target=True
+            kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
         )
         weight_decay = hparams.v_weight_decay * (
             torch.norm(delta) / torch.norm(target_init) ** 2
@@ -195,7 +195,7 @@ def compute_v(
         opt.step()
 
         # Project within L2 ball
-        max_norm = 5 * target_init.norm()
+        max_norm = hparams.clamp_norm_factor * target_init.norm()
         if delta.norm() > max_norm:
             with torch.no_grad():
                 delta[...] = delta * max_norm / delta.norm()
