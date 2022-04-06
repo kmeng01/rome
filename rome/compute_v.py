@@ -134,9 +134,11 @@ def compute_v(
 
         # Gather output representation at last non-masked token
         # Careful to slice out the KL divergence prompts
-        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0][:len(rewriting_prompts)]
+        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0][
+            : len(rewriting_prompts)
+        ]
         indices_to_gather = (
-            (opt_inputs["attention_mask"][:len(rewriting_prompts)].sum(1) - 1)
+            (opt_inputs["attention_mask"][: len(rewriting_prompts)].sum(1) - 1)
             .unsqueeze(1)
             .repeat(1, full_repr.size(-1))
             .unsqueeze(1)
@@ -147,9 +149,7 @@ def compute_v(
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
         # Compute value of objective functions
-        nll_loss_each = -torch.gather(
-            log_dist, 1, opt_targets.unsqueeze(0)
-        )
+        nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(0))
         # print(torch.exp(-nll_loss_each))
         nll_loss = nll_loss_each.sum()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
