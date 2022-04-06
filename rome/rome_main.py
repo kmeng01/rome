@@ -4,9 +4,12 @@ from typing import List, Dict, Tuple
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from util import nethook
+from util.generate import generate_fast
 from .compute_u import compute_u
 from .compute_v import compute_v
 from .rome_hparams import ROMEHyperParams
+
+CONTEXT_TEMPLATES_CACHE = None
 
 
 def apply_rome_to_model(
@@ -83,10 +86,18 @@ def execute_rome(
     deltas = {}
     for layer in sorted(hparams.layers):
         # Compute rank-1 update matrix
-        left_vector: torch.Tensor = compute_u(model, tok, request, hparams, layer)
+        left_vector: torch.Tensor = compute_u(
+            model, tok, request, hparams, layer, get_context_templates(model, tok)
+        )
         print("Left vector shape:", left_vector.shape)
         right_vector: torch.Tensor = compute_v(
-            model, tok, request, hparams, layer, left_vector
+            model,
+            tok,
+            request,
+            hparams,
+            layer,
+            left_vector,
+            get_context_templates(model, tok),
         )
         print("Right vector shape:", right_vector.shape)
 
@@ -128,3 +139,29 @@ def upd_matrix_match_shape(matrix: torch.Tensor, shape: torch.Size) -> torch.Ten
             "Update matrix computed by ROME does not match original weight shape. "
             "Check for bugs in the code?"
         )
+
+
+def get_context_templates(model, tok):
+    global CONTEXT_TEMPLATES_CACHE
+
+    if CONTEXT_TEMPLATES_CACHE is None:
+        CONTEXT_TEMPLATES_CACHE = ["{}"] + [
+            x + ". {}"
+            for x in sum(
+                (
+                    generate_fast(
+                        model,
+                        tok,
+                        ["<|endoftext|>"],
+                        n_gen_per_prompt=n_gen,
+                        max_out_len=length,
+                    )
+                    for length, n_gen in [(5, 20), (10, 20)]
+                ),
+                [],
+            )
+        ]
+
+        print(f"Cached context templates {CONTEXT_TEMPLATES_CACHE}")
+
+    return CONTEXT_TEMPLATES_CACHE

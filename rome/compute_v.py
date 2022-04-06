@@ -1,6 +1,5 @@
-from cgitb import lookup
-from typing import Dict, Tuple
-
+from typing import Dict, Tuple, List
+from matplotlib.style import context
 import numpy as np
 from rome import repr_tools
 import torch
@@ -8,8 +7,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from util import nethook
 
 from .rome_hparams import ROMEHyperParams
-
-MAX_NORM = 100000
 
 
 def compute_v(
@@ -19,6 +16,7 @@ def compute_v(
     hparams: ROMEHyperParams,
     layer: int,
     left_vector: torch.Tensor,
+    context_templates: List[str],
 ) -> torch.Tensor:
     """
     Computes the value (right) vector for the rank-1 update.
@@ -39,53 +37,51 @@ def compute_v(
 
     # Tokenize target into list of int token IDs
     target_ids = tok(request["target_new"]["str"])["input_ids"]
-    if len(target_ids) > 1:
-        print("-----------")
-        print("Warning: target is not a single token. ")
-        print("-----------")
+
+    # Compile list of rewriting x/y pairs
+    rewriting_prompts = [
+        context.format(request["prompt"]) + tok.decode(target_ids[:i])
+        for context in context_templates
+        for i in range(len(target_ids))
+    ]
+    rewriting_targets = [
+        target_ids[i]
+        for _ in range(len(context_templates))
+        for i in range(len(target_ids))
+    ]
+    assert len(rewriting_prompts) == len(rewriting_targets)
+
+    # Compile KL divergence prompts
+    kl_prompts = ["{} is a"]
 
     # Compute rewriting inputs and outputs
-    # Special care required to handle multi-token targets
-    rewriting_inputs = tok(
-        [
-            request["prompt"].format(request["subject"]) + tok.decode(target_ids[:i])
-            for i in range(len(target_ids))
-        ],
+    # Note that these have different lengths; KL prompts have no targets
+    all_prompts = rewriting_prompts + kl_prompts
+    opt_inputs = tok(
+        [prompt.format(request["subject"]) for prompt in all_prompts],
         return_tensors="pt",
         padding=True,
     ).to("cuda")
-    rewriting_targets = torch.tensor(target_ids).to("cuda")
-
-    # Compute KL loss inputs
-    kl_prompt_template = "{} is a"
-    kl_inputs = tok(
-        [kl_prompt_template.format(request["subject"])], return_tensors="pt"
-    ).to("cuda")
+    opt_targets = torch.tensor(rewriting_targets).to("cuda")
 
     # Compute indices of the tokens where the fact is looked up
-    lookup_idx = find_fact_lookup_idx(
-        request["prompt"], request["subject"], tok, hparams.fact_token
-    )
-    lookup_idx_kl = find_fact_lookup_idx(
-        kl_prompt_template, request["subject"], tok, hparams.fact_token
-    )
+    lookup_idxs = [
+        find_fact_lookup_idx(
+            prompt, request["subject"], tok, hparams.fact_token, verbose=(i == 0)
+        )
+        for i, prompt in enumerate(all_prompts)
+    ]
 
     # Finalize rewrite and loss layers
-    if layer == model.config.n_layer - 1:
-        layer -= 1
-        print(
-            f"Reducing rewrite layer to {layer}. "
-            f"Rewriting at layer {layer + 1} (the last layer) will have no effect."
-        )
+    loss_layer = max(hparams.v_loss_layer, layer)
     print(f"Rewrite layer is {layer}")
-    loss_layer = max(hparams.v_loss_layer, layer + 1)
     print(f"Tying optimization objective to {loss_layer}")
 
     # Set up an optimization over a latent vector that, when output at the
     # rewrite layer, i.e. hypothesized fact lookup location, will induce the
     # target token to be predicted at the final layer.
     delta = torch.zeros((model.config.n_embd,), requires_grad=True, device="cuda")
-    target_init = None
+    target_init, kl_distr_init = None, None
 
     # Inserts new "delta" variable at the appropriate part of the computation
     def edit_output_fn(cur_out, cur_layer):
@@ -95,26 +91,15 @@ def compute_v(
             # Store initial value of the vector of interest
             if target_init is None:
                 print("Recording initial value of v*")
-                # This vector should be consistent across the batch dimension
-                assert torch.allclose(
-                    cur_out[0, lookup_idx], cur_out[:, lookup_idx].mean(0)
-                )  # TODO remove this after initial test
-                target_init = cur_out[0, lookup_idx].detach()
-            cur_out[:, lookup_idx] += delta[None, :]
+                # Initial value is recorded for the clean sentence
+                target_init = cur_out[0, lookup_idxs[0]].detach().clone()
+
+            for i, idx in enumerate(lookup_idxs):
+                cur_out[i, idx, :] += delta
 
         return cur_out
 
-    # Keep track of original output distribution over "[subject] is a"
-    # Helps avoid essence drift
-    kl_distr_init = None
-
-    # Similar delta logic, but for the KL constraint prompt
-    def edit_output_fn_kl(cur_out, cur_layer):
-        if cur_layer == hparams.mlp_module_tmp.format(layer):
-            cur_out[:, lookup_idx_kl] += delta[None, :]
-        return cur_out
-
-    # Optimizers
+    # Optimizer
     opt = torch.optim.Adam([delta], lr=hparams.v_lr)
     nethook.set_requires_grad(False, model)
 
@@ -123,38 +108,37 @@ def compute_v(
         opt.zero_grad()
 
         # Forward propagation
-        trace_dict_args = dict(
+        with nethook.TraceDict(
             module=model,
             layers=[
                 hparams.layer_module_tmp.format(loss_layer),
                 hparams.mlp_module_tmp.format(layer),
             ],
             retain_input=False,
-        )
-
-        # Forward pass of rewriting prompt
-        with nethook.TraceDict(
             retain_output=True,
             edit_output=edit_output_fn,
-            **trace_dict_args,
         ) as tr:
-            model(**rewriting_inputs)
+            logits = model(**opt_inputs).logits
 
-        # Forward pass of distribution consistency prompt
-        with nethook.TraceDict(
-            retain_output=False,
-            edit_output=edit_output_fn_kl,
-            **trace_dict_args,
-        ) as _:
-            kl_logits = model(**kl_inputs).logits
-            kl_log_probs = torch.nn.functional.log_softmax(kl_logits[:, -1, :], dim=1)
+            # Compute distribution for KL divergence
+            kl_logits = torch.stack(
+                [
+                    logits[i - len(kl_prompts), idx, :]
+                    for i, idx in enumerate(lookup_idxs[-len(kl_prompts) :])
+                ],
+                dim=0,
+            )
+            kl_log_probs = torch.nn.functional.log_softmax(kl_logits, dim=1)
             if kl_distr_init is None:
-                kl_distr_init = kl_log_probs.detach()
+                kl_distr_init = kl_log_probs.detach().clone()
 
         # Gather output representation at last non-masked token
-        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0]
+        # Careful to slice out the KL divergence prompts
+        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0][
+            : len(rewriting_prompts)
+        ]
         indices_to_gather = (
-            (rewriting_inputs["attention_mask"].sum(1) - 1)
+            (opt_inputs["attention_mask"][: len(rewriting_prompts)].sum(1) - 1)
             .unsqueeze(1)
             .repeat(1, full_repr.size(-1))
             .unsqueeze(1)
@@ -164,10 +148,12 @@ def compute_v(
         # Compute probability distribution over tokens @ the loss layer
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
-        # Compute value of objective function
-        nll_loss = -torch.gather(log_dist, 1, rewriting_targets[:, None]).sum()
+        # Compute value of objective functions
+        nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(0))
+        # print(torch.exp(-nll_loss_each))
+        nll_loss = nll_loss_each.sum()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
-            kl_distr_init, kl_log_probs, log_target=True
+            kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
         )
         weight_decay = hparams.v_weight_decay * (
             torch.norm(delta) / torch.norm(target_init) ** 2
@@ -176,15 +162,24 @@ def compute_v(
         loss = nll_loss + kl_loss + weight_decay
         print(
             f"loss {np.round(loss.item(), 3)} = {np.round(nll_loss.item(), 3)} + {np.round(kl_loss.item(), 3)} + {np.round(weight_decay.item(), 3)} "
-            f"avg prob of [{tok.decode(rewriting_targets.detach().cpu().numpy())}] "
-            f"{torch.exp(-nll_loss).item()}"
+            f"avg prob of [{request['target_new']['str']}] "
+            f"{torch.exp(-nll_loss_each).mean().item()}"
         )
         if loss < 5e-2:
+            break
+
+        if it == hparams.v_num_grad_steps - 1:
             break
 
         # Backpropagate
         loss.backward()
         opt.step()
+
+        # Project within L2 ball
+        max_norm = hparams.clamp_norm_factor * target_init.norm()
+        if delta.norm() > max_norm:
+            with torch.no_grad():
+                delta[...] = delta * max_norm / delta.norm()
 
     target = target_init + delta
 
@@ -208,10 +203,6 @@ def compute_v(
         f"Change in target norm: {target_init.norm().item()} to {target.norm().item()} => {(target.norm() - target_init.norm()).item()}"
     )
     print(f"Division Factor: {torch.dot(cur_input, left_vector).item()}")
-
-    # Clamping hack to avoid catastrophe
-    right_vector *= min(right_vector.norm().item(), MAX_NORM) / right_vector.norm()
-
     print(f"Right vector norm: {right_vector.norm()}")
 
     return right_vector
@@ -266,7 +257,11 @@ def get_module_input_output_at_word(
 
 
 def find_fact_lookup_idx(
-    prompt: str, subject: str, tok: AutoTokenizer, fact_token_strategy: str
+    prompt: str,
+    subject: str,
+    tok: AutoTokenizer,
+    fact_token_strategy: str,
+    verbose=True,
 ) -> int:
     """
     Computes hypothesized fact lookup index given a sentence and subject.
@@ -285,9 +280,10 @@ def find_fact_lookup_idx(
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")
 
     sentence = prompt.format(subject)
-    print(
-        f"Lookup index found: {ret} | Sentence: {sentence} | Token:",
-        tok.decode(tok(sentence)["input_ids"][ret]),
-    )
+    if verbose:
+        print(
+            f"Lookup index found: {ret} | Sentence: {sentence} | Token:",
+            tok.decode(tok(sentence)["input_ids"][ret]),
+        )
 
     return ret

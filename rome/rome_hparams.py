@@ -10,6 +10,7 @@ class ROMEHyperParams(HyperParams):
         "v_lr",
         "v_loss_layer",
         "v_weight_decay",
+        "clamp_norm_factor",
         "kl_factor",
         "mom2_adjustment",
         # Module templates
