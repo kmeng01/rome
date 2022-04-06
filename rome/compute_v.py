@@ -228,16 +228,17 @@ def get_module_input_output_at_word(
         layer=layer,
         module_template=module_template,
     )
-    if fact_token_strategy == "subject_last":
+    if fact_token_strategy.index("subject_") == 0:
         context_info = dict(
             context_template=context_template,
             word=word,
         )
-        l_input = repr_tools.get_repr_at_word_last_token(
-            track="in", **context_info, **word_repr_args
+        subtoken = fact_token_strategy[len("subject_") :]
+        l_input = repr_tools.get_repr_at_word_token(
+            track="in", subtoken=subtoken, **context_info, **word_repr_args
         )
-        l_output = repr_tools.get_repr_at_word_last_token(
-            track="out", **context_info, **word_repr_args
+        l_output = repr_tools.get_repr_at_word_token(
+            track="out", subtoken=subtoken, **context_info, **word_repr_args
         )
     elif fact_token_strategy == "last":
         context_info = dict(
@@ -270,11 +271,12 @@ def find_fact_lookup_idx(
     ret = None
     if fact_token_strategy == "last":
         ret = -1
-    elif fact_token_strategy == "subject_last":
-        ret = repr_tools.get_last_word_idx_in_template(
+    elif fact_token_strategy.index("subject_") == 0:
+        ret = repr_tools.get_word_idx_in_template(
             tok=tok,
             context_template=prompt,
             word=subject,
+            subtoken=fact_token_strategy[len("subject_") :],
         )[0]
     else:
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")

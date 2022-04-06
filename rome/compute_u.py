@@ -80,15 +80,16 @@ def compute_u(
         module_template=hparams.rewrite_module_tmp,
         track="in",
     )
-    if hparams.fact_token == "subject_last":
-        # Sample some prefixes to get the contextual embedding of subject
+    if hparams.fact_token.index("subject_") == 0:
         word = request["subject"]
-
         print(f"Selected u projection object {word}")
         cur_repr = torch.stack(
             [  # TODO batch this to improve performance
-                repr_tools.get_repr_at_word_last_token(
-                    context_template=templ, word=word, **word_repr_args
+                repr_tools.get_repr_at_word_token(
+                    context_template=templ.format(request["prompt"]),
+                    word=word,
+                    subtoken=hparams.fact_token[len("subject_") :],
+                    **word_repr_args,
                 )
                 for templ in context_templates
             ],
