@@ -228,7 +228,7 @@ def get_module_input_output_at_word(
         layer=layer,
         module_template=module_template,
     )
-    if fact_token_strategy.index("subject_") == 0:
+    if "subject_" in fact_token_strategy and fact_token_strategy.index("subject_") == 0:
         context_info = dict(
             context_template=context_template,
             word=word,
@@ -271,7 +271,9 @@ def find_fact_lookup_idx(
     ret = None
     if fact_token_strategy == "last":
         ret = -1
-    elif fact_token_strategy.index("subject_") == 0:
+    elif (
+        "subject_" in fact_token_strategy and fact_token_strategy.index("subject_") == 0
+    ):
         ret = repr_tools.get_word_idx_in_template(
             tok=tok,
             context_template=prompt,

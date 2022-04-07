@@ -80,7 +80,7 @@ def compute_u(
         module_template=hparams.rewrite_module_tmp,
         track="in",
     )
-    if hparams.fact_token.index("subject_") == 0:
+    if "subject_" in hparams.fact_token and hparams.fact_token.index("subject_") == 0:
         word = request["subject"]
         print(f"Selected u projection object {word}")
         cur_repr = torch.stack(
