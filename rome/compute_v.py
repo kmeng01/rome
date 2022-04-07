@@ -149,7 +149,7 @@ def compute_v(
         log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
 
         # Compute value of objective functions
-        nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(0))
+        nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(1)).squeeze(0)
         nll_loss = nll_loss_each.mean()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
