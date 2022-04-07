@@ -150,8 +150,7 @@ def compute_v(
 
         # Compute value of objective functions
         nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(0))
-        # print(torch.exp(-nll_loss_each))
-        nll_loss = nll_loss_each.sum()
+        nll_loss = nll_loss_each.mean()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
         )
