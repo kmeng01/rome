@@ -154,7 +154,7 @@ def generate_test_matrix(truth_matrix, noise_matrix, prior_cutoff=None):
         next_cutoff = truth_matrix.max()
     else:
         prior_cutoff_matrix = truth_matrix[truth_matrix < prior_cutoff]
-        next_cutoff = prior_cutoff_matrix.max(dim=0)
+        next_cutoff = prior_cutoff_matrix.max()
     new_truth_mask = truth_matrix.ge(next_cutoff) # ge = greater than or equal to
     new_noise_mask = ~new_truth_mask # tilde means not, inverts boolean mask
     new_sample_matrix = torch.mul(truth_matrix, new_truth_mask) + torch.mul(noise_matrix, new_noise_mask)
