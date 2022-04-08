@@ -156,7 +156,7 @@ def get_context_templates(model, tok):
                         n_gen_per_prompt=n_gen,
                         max_out_len=length,
                     )
-                    for length, n_gen in [(5, 20), (10, 20)]
+                    for length, n_gen in [(5, 10), (10, 10)]
                 ),
                 [],
             )
