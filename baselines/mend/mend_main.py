@@ -18,23 +18,23 @@ ROOT_URL = "https://rome.baulab.info"
 class MendRewriteExecutor:
     method_name = "MEND"
 
-    def __init__(self):  # or gptj
+    def __init__(self):
         self.is_init = False
 
     def init_model(self, model, tok, params):
         cf = "counterfact-" if params.counterfact else ""
+        mini_string = "mini-" if params.mini else ""
 
         model_name = "gpt2-xl" if params.model_name == "gpt2-xl" else "gpt-j-6b"
         modelcode = "gpt2xl" if params.model_name == "gpt2-xl" else "gptj"
-        model_filename = f"mend-{params.n_toks}tok-{cf}{model_name}.pt"
+        model_filename = f"mend-{mini_string}{params.n_toks}tok-{cf}{model_name}.pt"
         model_dir = "baselines/mend/weights"
 
         os.makedirs(model_dir, exist_ok=True)
         if not os.path.isfile(f"{model_dir}/{model_filename}"):
-            torch.hub.download_url_to_file(
-                f"{ROOT_URL}/data/weights/{model_filename}",
-                f"{model_dir}/{model_filename}",
-            )
+            remote_url = f"{ROOT_URL}/data/weights/{model_filename}"
+            print(f"Attemping to download from {remote_url}")
+            torch.hub.download_url_to_file(remote_url, f"{model_dir}/{model_filename}")
         with hydra.initialize(config_path="config", job_name="run"):
             config = hydra.compose(
                 config_name="config",
