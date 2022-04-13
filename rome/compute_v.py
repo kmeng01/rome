@@ -36,33 +36,33 @@ def compute_v(
     print("Computing right vector (v)")
 
     # Tokenize target into list of int token IDs
-    target_ids = tok(request["target_new"]["str"])["input_ids"]
+    target_ids = tok(request["target_new"]["str"], return_tensors="pt").to("cuda")[
+        "input_ids"
+    ][0]
 
-    # Compile list of rewriting x/y pairs
-    rewriting_prompts = [
-        context.format(request["prompt"]) + tok.decode(target_ids[:i])
+    # Compile list of rewriting and KL x/y pairs
+    rewriting_prompts, kl_prompts = [
+        context.format(request["prompt"]) + tok.decode(target_ids[:-1])
         for context in context_templates
-        for i in range(len(target_ids))
-    ]
-    rewriting_targets = [
-        target_ids[i]
-        for _ in range(len(context_templates))
-        for i in range(len(target_ids))
-    ]
-    assert len(rewriting_prompts) == len(rewriting_targets)
-
-    # Compile KL divergence prompts
-    kl_prompts = ["{} is a"]
-
-    # Compute rewriting inputs and outputs
-    # Note that these have different lengths; KL prompts have no targets
+    ], ["{} is a"]
     all_prompts = rewriting_prompts + kl_prompts
-    opt_inputs = tok(
+
+    input_tok = tok(
         [prompt.format(request["subject"]) for prompt in all_prompts],
         return_tensors="pt",
         padding=True,
     ).to("cuda")
-    opt_targets = torch.tensor(rewriting_targets).to("cuda")
+
+    # Compute rewriting targets
+    rewriting_targets = torch.tensor(-100, device="cuda").repeat(
+        len(rewriting_prompts), *input_tok["input_ids"].shape[1:]
+    )
+    for i in range(len(rewriting_prompts)):
+        ex_len = input_tok["attention_mask"][i].sum()
+        rewriting_targets[i, ex_len - len(target_ids) : ex_len] = target_ids
+
+    # for i in range(rewriting_tok["input_ids"].size(0)):
+    #     print(list(zip(rewriting_tok["input_ids"][i].detach().cpu().numpy(), [tok.decode(z) for z in rewriting_tok["input_ids"][i]], rewriting_targets[i].detach().cpu().numpy(), [tok.decode(z) if z != -100 else "" for z in rewriting_targets[i]])))
 
     # Compute indices of the tokens where the fact is looked up
     lookup_idxs = [
@@ -118,7 +118,7 @@ def compute_v(
             retain_output=True,
             edit_output=edit_output_fn,
         ) as tr:
-            logits = model(**opt_inputs).logits
+            logits = model(**input_tok).logits
 
             # Compute distribution for KL divergence
             kl_logits = torch.stack(
@@ -132,24 +132,20 @@ def compute_v(
             if kl_distr_init is None:
                 kl_distr_init = kl_log_probs.detach().clone()
 
-        # Gather output representation at last non-masked token
-        # Careful to slice out the KL divergence prompts
+        # Compute loss on rewriting targets
         full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0][
             : len(rewriting_prompts)
         ]
-        indices_to_gather = (
-            (opt_inputs["attention_mask"][: len(rewriting_prompts)].sum(1) - 1)
-            .unsqueeze(1)
-            .repeat(1, full_repr.size(-1))
-            .unsqueeze(1)
-        )
-        gathered_reprs = torch.gather(full_repr, 1, indices_to_gather).squeeze(1)
+        log_probs = torch.log_softmax(ln_f(full_repr) @ lm_w + lm_b, dim=2)
+        loss = torch.gather(
+            log_probs,
+            2,
+            torch.where(rewriting_targets != -100, rewriting_targets, 0).unsqueeze(2),
+        ).squeeze(2)
+        mask = (rewriting_targets != -100).float()
 
-        # Compute probability distribution over tokens @ the loss layer
-        log_dist = torch.log_softmax(ln_f(gathered_reprs) @ lm_w + lm_b, dim=1)
-
-        # Compute value of objective functions
-        nll_loss_each = -torch.gather(log_dist, 1, opt_targets.unsqueeze(1)).squeeze(0)
+        # Aggregate total losses
+        nll_loss_each = -(loss * mask).sum(1) / target_ids.size(0)
         nll_loss = nll_loss_each.mean()
         kl_loss = hparams.kl_factor * torch.nn.functional.kl_div(
             kl_distr_init, kl_log_probs, log_target=True, reduction="batchmean"
