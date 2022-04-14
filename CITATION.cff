@@ -1,6 +1,16 @@
-@article{meng2022locating,
-  title={Locating and Editing Factual Knowledge in GPT},
-  author={Kevin Meng and David Bau and Alex Andonian and Yonatan Belinkov},
-  journal={arXiv preprint arXiv:2202.05262},
-  year={2022}
-}
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Kevin"
+    given-names: "Meng"
+  - family-names: "David"
+    given-names: "Bau"
+  - family-names: "Alex"
+    given-names: "Andonian"
+  - family-names: "Yonatan"
+    given-names: "Belinkov"
+  journal: "arXiv preprint arXiv:2202.05262"
+  title: "Locating and Editing Factual Knowledge in GPT"
+  year: 2022
