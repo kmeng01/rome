@@ -61,9 +61,6 @@ def compute_v(
         ex_len = input_tok["attention_mask"][i].sum()
         rewriting_targets[i, ex_len - len(target_ids) : ex_len] = target_ids
 
-    # for i in range(rewriting_tok["input_ids"].size(0)):
-    #     print(list(zip(rewriting_tok["input_ids"][i].detach().cpu().numpy(), [tok.decode(z) for z in rewriting_tok["input_ids"][i]], rewriting_targets[i].detach().cpu().numpy(), [tok.decode(z) if z != -100 else "" for z in rewriting_targets[i]])))
-
     # Compute indices of the tokens where the fact is looked up
     lookup_idxs = [
         find_fact_lookup_idx(
