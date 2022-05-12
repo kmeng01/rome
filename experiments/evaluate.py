@@ -5,14 +5,13 @@ import torch
 from pathlib import Path
 from time import time
 from typing import Union, Tuple
-
-from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from counterfact import AttributeSnippets, CounterFactDataset
 from counterfact.tfidf.tfidf_stats import get_tfidf_vectorizer
 
 from util import nethook
+from util.globals import *
 
 # All methods
 from rome import ROMEHyperParams, apply_rome_to_model
@@ -23,14 +22,6 @@ from baselines.mend import MENDHyperParams, MendRewriteExecutor
 
 # Evaluation tools
 from experiments.py.eval_utils import compute_rewrite_quality
-
-# Load directory configurations
-load_dotenv()
-RESULTS_DIR = Path(os.getenv("RESULTS_DIR"))
-COUNTERFACT_DIR = Path(os.getenv("COUNTERFACT_DIR"))
-TFIDF_DIR = Path(os.getenv("TFIDF_DIR"))
-HPARAMS_DIR = Path(os.getenv("HPARAMS_DIR"))
-DATA_DIR = Path(os.getenv("DATA_DIR"))
 
 ALG_DICT = {
     "ROME": (ROMEHyperParams, apply_rome_to_model),

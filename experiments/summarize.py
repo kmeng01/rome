@@ -3,13 +3,9 @@ import json
 import os
 from pathlib import Path
 from typing import List, Optional
-
 import numpy as np
-from dotenv import load_dotenv
 
-# Load directory configurations
-load_dotenv()
-RESULTS_DIR = Path(os.getenv("RESULTS_DIR"))
+from util.globals import *
 
 
 def main(

@@ -2,20 +2,16 @@ import os
 import torch
 from pathlib import Path
 from typing import Dict, List
-from dotenv import load_dotenv
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from rome import repr_tools
 
 
 from .layer_stats import layer_stats
 from .rome_hparams import ROMEHyperParams
+from util.globals import *
 
 # Cache variables
 inv_mom2_cache = {}
-
-# Load directory configurations
-load_dotenv()
-STATS_DIR = Path(os.getenv("STATS_DIR"))
 
 
 def get_inv_cov(

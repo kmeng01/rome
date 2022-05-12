@@ -6,11 +6,10 @@ from typing import Tuple, Dict, List
 
 from util.generate import generate_fast
 from util import nethook
+from util.globals import *
 
 from rome import apply_rome_to_model, ROMEHyperParams
 from baselines.ft import FTHyperParams, apply_ft_to_model
-
-HPARAMS_DIR = Path(os.getenv("HPARAMS_DIR"))
 
 
 def demo_model_editing(
