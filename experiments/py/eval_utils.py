@@ -14,7 +14,7 @@ from itertools import chain
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from counterfact import AttributeSnippets
+from dsets import AttributeSnippets
 
 from util.generate import generate_fast
 from util.perplexity import perplexity

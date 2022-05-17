@@ -7,8 +7,8 @@ from time import time
 from typing import Union, Tuple
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from counterfact import AttributeSnippets, CounterFactDataset
-from counterfact.tfidf.tfidf_stats import get_tfidf_vectorizer
+from dsets import AttributeSnippets, CounterFactDataset
+from dsets.tfidf.tfidf_stats import get_tfidf_vectorizer
 
 from util import nethook
 from util.globals import *
@@ -54,7 +54,7 @@ def main(
     else:
         alg_dir = RESULTS_DIR / dir_name
         if alg_dir.exists():
-            id_list = [int(str(x).split("_")[-1]) for x in alg_dir.iterdir()]
+            id_list = [int(str(x).split("_")[-1]) for x in alg_dir.iterdir() if str(x).split("_")[-1].isnumeric()]
             run_id = 0 if not id_list else max(id_list) + 1
         else:
             run_id = 0
@@ -75,7 +75,7 @@ def main(
 
     # Load data
     print("Loading dataset, attribute snippets, tf-idf data")
-    ds = CounterFactDataset(COUNTERFACT_DIR, size=dataset_size_limit)
+    ds = CounterFactDataset(COMPILED_DATASETS_DIR, size=dataset_size_limit)
     snips = AttributeSnippets(DATA_DIR) if not skip_generation_tests else None
     vec = get_tfidf_vectorizer(TFIDF_DIR) if not skip_generation_tests else None
 

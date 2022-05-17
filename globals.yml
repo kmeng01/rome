@@ -7,8 +7,8 @@
   STATS_DIR: "data/stats"
 
   # Dataset files
-  COUNTERFACT_DIR: "counterfact/compiled"
-  TFIDF_DIR: "counterfact/tfidf"
+  COMPILED_DATASETS_DIR: "dsets/compiled"
+  TFIDF_DIR: "dsets/tfidf"
 
   # Hyperparameters
   HPARAMS_DIR: "hparams"
