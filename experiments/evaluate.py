@@ -62,7 +62,11 @@ def main(
     else:
         alg_dir = RESULTS_DIR / dir_name
         if alg_dir.exists():
-            id_list = [int(str(x).split("_")[-1]) for x in alg_dir.iterdir() if str(x).split("_")[-1].isnumeric()]
+            id_list = [
+                int(str(x).split("_")[-1])
+                for x in alg_dir.iterdir()
+                if str(x).split("_")[-1].isnumeric()
+            ]
             run_id = 0 if not id_list else max(id_list) + 1
         else:
             run_id = 0

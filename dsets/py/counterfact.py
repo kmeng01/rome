@@ -6,10 +6,7 @@ import json
 
 class CounterFactDataset(Dataset):
     def __init__(
-        self,
-        data_dir: str,
-        size: typing.Optional[int] = 10000,
-        *args, **kwargs
+        self, data_dir: str, size: typing.Optional[int] = 10000, *args, **kwargs
     ):
         with open(Path(data_dir) / "counterfact.json", "r") as f:
             self.data = json.load(f)

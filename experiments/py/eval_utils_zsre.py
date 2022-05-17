@@ -60,12 +60,12 @@ def compute_rewrite_quality_zsre(
         for i in range(len(target_tok))
     ]
     inp_targets = [
-        tok.decode(target_tok[i]) for _ in range(len(inp_prompts_og)) for i in range(len(target_tok))
+        tok.decode(target_tok[i])
+        for _ in range(len(inp_prompts_og))
+        for i in range(len(target_tok))
     ]
 
-    stuff_probs = test_batch_prediction_acc(
-        model, tok, inp_prompts, inp_targets
-    )
+    stuff_probs = test_batch_prediction_acc(model, tok, inp_prompts, inp_targets)
 
     # Predict for neighborhood prompts (dictionary format).
     neighborhood_correct = test_batch_prediction_acc(
@@ -99,12 +99,7 @@ def compute_rewrite_quality_zsre(
     return ret
 
 
-def test_batch_prediction_acc(
-    model,
-    tok,
-    prompts: typing.List[str],
-    target
-):
+def test_batch_prediction_acc(model, tok, prompts: typing.List[str], target):
     print(prompts, target)
     prompt_tok = tok(
         prompts,
