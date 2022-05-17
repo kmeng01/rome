@@ -13,7 +13,7 @@ class MENDQADataset:
     Project page: http://nlp.cs.washington.edu/zeroshot/
     """
 
-    def __init__(self, data_dir: str, tok: AutoTokenizer):
+    def __init__(self, data_dir: str, tok: AutoTokenizer, *args, **kwargs):
         data_dir = Path(data_dir)
         zsre_loc = data_dir / "zsre_mend.json"
         if not zsre_loc.exists():

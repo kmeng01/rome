@@ -1,7 +1,7 @@
 """
 Contains evaluation utilities for pytorch-based rewriting methods.
-To use, simply call `compute_rewrite_quality` with the appropriate arguments,
-which returns a dictionary containing them. See below for documentation.
+To use, simply call `compute_rewrite_quality_counterfact` with the
+appropriate arguments, which returns a dictionary containing them.
 """
 
 import typing
