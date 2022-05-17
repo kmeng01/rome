@@ -21,7 +21,8 @@ from baselines.kn import KNHyperParams, apply_kn_to_model
 from baselines.mend import MENDHyperParams, MendRewriteExecutor
 
 # Evaluation tools
-from experiments.py.eval_utils import compute_rewrite_quality
+from experiments.py.eval_utils_counterfact import compute_rewrite_quality_counterfact
+
 
 ALG_DICT = {
     "ROME": (ROMEHyperParams, apply_rome_to_model),
@@ -118,13 +119,13 @@ def main(
                 "case_id": case_id,
                 "requested_rewrite": record["requested_rewrite"],
                 "time": exec_time,
-                "post": compute_rewrite_quality(edited_model, tok, record, snips, vec),
+                "post": compute_rewrite_quality_counterfact(edited_model, tok, record, snips, vec),
             }
 
             with torch.no_grad():
                 for k, v in weights_copy.items():
                     nethook.get_parameter(model, k)[...] = v.to("cuda")
-            metrics["pre"] = compute_rewrite_quality(model, tok, record, snips, vec)
+            metrics["pre"] = compute_rewrite_quality_counterfact(model, tok, record, snips, vec)
 
             print("Evaluation took", time() - start)
 
