@@ -114,7 +114,11 @@ def test_batch_prediction_acc(model, tok, prompts: typing.List[str], target):
         gathered = torch.gather(logits, 1, to_gather).squeeze(1)
         ans = torch.argmax(gathered, dim=1)
 
-        correct_id = tok(target, return_tensors="pt").to("cuda")["input_ids"].squeeze()
+        correct_id = tok(target, padding=True, return_tensors="pt").to("cuda")[
+            "input_ids"
+        ]
+        # Temporary hack to deal with foreign characters.
+        correct_id = correct_id[:, 0].squeeze()
         print(f"ans: {ans} | correct_id: {correct_id}")
 
         return (ans == correct_id).detach().cpu().numpy().tolist()
