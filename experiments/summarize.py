@@ -40,8 +40,12 @@ def main(
             for prefix in ["pre", "post"]:
                 # Probability metrics for which new should be lower (better) than true
                 for key in ["rewrite_prompts_probs", "paraphrase_prompts_probs"]:
+                    if prefix not in data or key not in data[prefix]:
+                        continue
+
                     sum_key_discrete = f"{prefix}_{key.split('_')[0]}_success"
                     sum_key_cont = f"{prefix}_{key.split('_')[0]}_diff"
+
                     cur_sum[sum_key_discrete].append(
                         np.mean(
                             [
@@ -63,25 +67,37 @@ def main(
                 sum_key_discrete = f"{prefix}_neighborhood_success"
                 sum_key_cont = f"{prefix}_neighborhood_diff"
                 key = "neighborhood_prompts_probs"
-                cur_sum[sum_key_discrete].append(
-                    np.mean(
-                        [x["target_true"] < x["target_new"] for x in data[prefix][key]]
+                if prefix in data and key in data[prefix]:
+                    cur_sum[sum_key_discrete].append(
+                        np.mean(
+                            [
+                                x["target_true"] < x["target_new"]
+                                for x in data[prefix][key]
+                            ]
+                        )
                     )
-                )
-                cur_sum[sum_key_cont].append(
-                    np.mean(
-                        [
-                            np.exp(-x["target_true"]) - np.exp(-x["target_new"])
-                            for x in data[prefix][key]
-                        ]
+                    cur_sum[sum_key_cont].append(
+                        np.mean(
+                            [
+                                np.exp(-x["target_true"]) - np.exp(-x["target_new"])
+                                for x in data[prefix][key]
+                            ]
+                        )
                     )
-                )
 
-                # Numerical metrics that can be directly averaged
+                # zsRE evaluation metrics
+                for key in ["rewrite", "paraphrase", "neighborhood"]:
+                    sum_key = f"{prefix}_{key}_acc"
+                    key = f"{key}_prompts_correct"
+
+                    if prefix not in data or key not in data[prefix]:
+                        continue
+
+                    cur_sum[sum_key].append(np.mean(data[prefix][key]))
+
+                # Generation metrics that can be directly averaged
                 for key in ["ngram_entropy", "reference_score", "essence_score"]:
-                    if (
-                        key in data[prefix] and data[prefix][key] is not None
-                    ):  # Generation may have been skipped during eval
+                    if prefix in data and key in data[prefix]:
                         cur_sum[f"{prefix}_{key}"].append(data[prefix][key])
 
         if len(cur_sum) == 0:
