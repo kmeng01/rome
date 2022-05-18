@@ -78,7 +78,9 @@ def compute_rewrite_quality_zsre(
     probs = stuff_probs + neighborhood_correct
 
     # Unflatten the results again into a list of lists.
-    cutoffs = [0] + np.cumsum([l * len(target_tok) for l in map(len, prob_prompts)]).tolist()
+    cutoffs = [0] + np.cumsum(
+        [l * len(target_tok) for l in map(len, prob_prompts)]
+    ).tolist()
     ret_probs = [probs[cutoffs[i - 1] : cutoffs[i]] for i in range(1, len(cutoffs))]
     # Structure the restuls as a dictionary.
     ret = {

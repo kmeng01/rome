@@ -23,7 +23,9 @@ class EfkRewriteExecutor:
         self.is_init = False
 
     def init_model(self, model, tok, params):
-        train_ds = "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
+        train_ds = (
+            "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
+        )
 
         modelcode = "gpt2xl" if params.model_name == "gpt2-xl" else "gpt-j-6b"
         model_filename = f"efk-{params.n_toks}tok-{train_ds}gpt2-xl.pt"

@@ -22,12 +22,16 @@ class MendRewriteExecutor:
         self.is_init = False
 
     def init_model(self, model, tok, params):
-        train_ds = "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
+        train_ds = (
+            "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
+        )
         mini_string = "mini-" if params.mini else ""
 
         model_name = "gpt2-xl" if params.model_name == "gpt2-xl" else "gpt-j-6b"
         modelcode = "gpt2xl" if params.model_name == "gpt2-xl" else "gptj"
-        model_filename = f"mend-{mini_string}{params.n_toks}tok-{train_ds}{model_name}.pt"
+        model_filename = (
+            f"mend-{mini_string}{params.n_toks}tok-{train_ds}{model_name}.pt"
+        )
         model_dir = "baselines/mend/weights"
 
         os.makedirs(model_dir, exist_ok=True)
