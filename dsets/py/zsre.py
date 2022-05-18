@@ -26,6 +26,9 @@ class MENDQADataset:
 
         data = []
         for i, record in enumerate(raw):
+            assert (
+                "nq question: " in record["loc"]
+            ), f"Neighborhood prompt missing `nq question:`. Check for errors?"
             ans_toks = tok(" " + record["loc_ans"])["input_ids"]
             data.append(
                 {
