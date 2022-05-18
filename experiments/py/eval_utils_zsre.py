@@ -42,14 +42,11 @@ def compute_rewrite_quality_zsre(
     rewrite_prompts = [record["requested_rewrite"]["prompt"].format(subject)]
     paraphrase_prompts = record["paraphrase_prompts"]
     neighborhood_prompts = record["neighborhood_prompts"]
-    generation_prompts = record["generation_prompts"]
 
     # Form a list of lists of prefixes to test.
     prob_prompts = [
         rewrite_prompts,
         paraphrase_prompts,
-        # neighborhood_prompts,
-        # attribute_prompts,
     ]
     # Flatten all the evaluated prefixes into one list.
     target_tok = tok(" " + target_new["str"])["input_ids"]
@@ -79,10 +76,9 @@ def compute_rewrite_quality_zsre(
     )
 
     probs = stuff_probs + neighborhood_correct
-    prob_prompts = prob_prompts + [neighborhood_prompts]
 
     # Unflatten the results again into a list of lists.
-    cutoffs = [0] + np.cumsum(list(map(len, prob_prompts))).tolist()
+    cutoffs = [0] + np.cumsum([l * len(target_tok) for l in map(len, prob_prompts)]).tolist()
     ret_probs = [probs[cutoffs[i - 1] : cutoffs[i]] for i in range(1, len(cutoffs))]
     # Structure the restuls as a dictionary.
     ret = {

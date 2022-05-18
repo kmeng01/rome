@@ -7,4 +7,5 @@ class EFKHyperParams(HyperParams):
         "n_toks",
         "model_name",
         "counterfact",
+        "zsre"
     ]

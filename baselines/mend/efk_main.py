@@ -23,10 +23,10 @@ class EfkRewriteExecutor:
         self.is_init = False
 
     def init_model(self, model, tok, params):
-        cf = "counterfact-" if params.counterfact else ""
+        train_ds = "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
 
         modelcode = "gpt2xl" if params.model_name == "gpt2-xl" else "gpt-j-6b"
-        model_filename = f"efk-{params.n_toks}tok-{cf}gpt2-xl.pt"
+        model_filename = f"efk-{params.n_toks}tok-{train_ds}gpt2-xl.pt"
         model_dir = "baselines/efk/weights"
 
         os.makedirs(model_dir, exist_ok=True)

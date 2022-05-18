@@ -3,5 +3,6 @@
     "n_toks": 1,
     "model_name": "gpt2-xl",
     "counterfact": true,
+    "zsre": false,
     "mini": false
 }

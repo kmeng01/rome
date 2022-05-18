@@ -92,6 +92,7 @@ def load_alg(alg_name):
         "KN",
         "MEND",
         "MEND-CF",
+        "MEND-zsRE",
         "KE",
         "KE-CF",
         "ROME",
@@ -120,6 +121,12 @@ def load_alg(alg_name):
                 MendRewriteExecutor().apply_to_model,
                 "MEND",
                 "_CF",
+            ),
+            "MEND-zsRE": (
+                MENDHyperParams,
+                MendRewriteExecutor().apply_to_model,
+                "MEND",
+                "_zsRE",
             ),
             "KE-CF": (
                 EFKHyperParams,
