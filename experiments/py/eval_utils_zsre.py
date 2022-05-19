@@ -98,7 +98,6 @@ def compute_rewrite_quality_zsre(
 
 
 def test_batch_prediction_acc(model, tok, prompts: typing.List[str], target):
-    print(prompts, target)
     prompt_tok = tok(
         prompts,
         padding=True,
