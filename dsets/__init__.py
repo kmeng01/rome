@@ -1,3 +1,4 @@
-from .py.attr_snippets import AttributeSnippets
-from .py.counterfact import CounterFactDataset
-from .py.zsre import MENDQADataset
+from .attr_snippets import AttributeSnippets
+from .counterfact import CounterFactDataset
+from .knowns import KnownsDataset
+from .zsre import MENDQADataset
