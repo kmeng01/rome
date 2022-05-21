@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import json
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -9,7 +10,7 @@ from dsets import AttributeSnippets
 from util.globals import *
 
 REMOTE_IDF_URL = f"{REMOTE_ROOT_URL}/data/dsets/idf.npy"
-REMOTE_VOCAB_URL = f"{REMOTE_ROOT_URL}/data/dsets/vocab.json"
+REMOTE_VOCAB_URL = f"{REMOTE_ROOT_URL}/data/dsets/tfidf_vocab.json"
 
 
 def get_tfidf_vectorizer(data_dir: str):
@@ -49,14 +50,16 @@ def collect_stats(data_dir: str):
     idf_loc, vocab_loc = data_dir / "idf.npy", data_dir / "tfidf_vocab.json"
 
     try:
+        print(f"Downloading IDF cache from {REMOTE_IDF_URL}")
         torch.hub.download_url_to_file(REMOTE_IDF_URL, idf_loc)
+        print(f"Downloading TF-IDF vocab cache from {REMOTE_VOCAB_URL}")
         torch.hub.download_url_to_file(REMOTE_VOCAB_URL, vocab_loc)
         return
     except Exception as e:
         print(f"Error downloading file:", e)
         print("Recomputing TF-IDF stats...")
 
-    snips_list = AttributeSnippets().snippets_list
+    snips_list = AttributeSnippets(data_dir).snippets_list
     documents = list(chain(*[[y["text"] for y in x["samples"]] for x in snips_list]))
 
     vec = TfidfVectorizer()
