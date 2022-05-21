@@ -1,9 +1,8 @@
 import collections
 import json
-import os
-from pathlib import Path
 from typing import List, Optional
 import numpy as np
+from pprint import pprint
 
 from util.globals import *
 
@@ -28,8 +27,11 @@ def main(
         files = list(run_dir.glob("case_*.json"))
         files.sort(key=lambda x: int(str(x).split("_")[-1].split(".")[0]))
         for case_file in files:
-            with open(case_file, "r") as f:
-                data = json.load(f)
+            try:
+                with open(case_file, "r") as f:
+                    data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Could not decode {case_file} due to format error; skipping.")
 
             case_id = data["case_id"]
             if first_n_cases is not None and case_id >= first_n_cases:
@@ -118,7 +120,7 @@ def main(
                 cur_sum[k] = tuple(np.around(z * 100, 2) for z in v)
 
         cur_sum.update(metadata)
-        print(cur_sum)
+        pprint(cur_sum)
         summaries.append(cur_sum)
 
     return uncompressed if get_uncompressed else summaries
