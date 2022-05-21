@@ -1,10 +1,7 @@
-# Pipeline dumps
+# Pipeline dumps, data directory
 results
 data
 *_tmp_*_.json
-
-# Dataset materials
-dsets/compiled
 
 # Pre-trained hypernetworks
 baselines/*/weights

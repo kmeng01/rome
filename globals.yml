@@ -7,7 +7,6 @@
   STATS_DIR: "data/stats"
 
   # Dataset files
-  COMPILED_DATASETS_DIR: "dsets/compiled"
   TFIDF_DIR: "dsets/tfidf"
 
   # Hyperparameters

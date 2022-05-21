@@ -100,7 +100,7 @@ def main(
     vec = get_tfidf_vectorizer(TFIDF_DIR) if not skip_generation_tests else None
 
     ds_class, ds_eval_method = DS_DICT[ds_name]
-    ds = ds_class(COMPILED_DATASETS_DIR, size=dataset_size_limit, tok=tok)
+    ds = ds_class(DATA_DIR, size=dataset_size_limit, tok=tok)
 
     # Iterate through dataset
     for record in ds:
