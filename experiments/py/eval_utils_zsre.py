@@ -116,6 +116,5 @@ def test_batch_prediction_acc(model, tok, prompts: typing.List[str], target):
         ]
         # Temporary hack to deal with foreign characters.
         correct_id = correct_id[:, 0].squeeze()
-        print(f"ans: {ans} | correct_id: {correct_id}")
 
         return (ans == correct_id).detach().cpu().numpy().tolist()
