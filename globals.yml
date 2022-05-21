@@ -12,3 +12,6 @@
 
   # Hyperparameters
   HPARAMS_DIR: "hparams"
+
+  # Remote URLs
+  REMOTE_ROOT_URL: "https://rome.baulab.info"
