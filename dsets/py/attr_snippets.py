@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 import collections
 
-REMOTE_URL = "https://rome.baulab.info/data/attribute_snippets.json"
+from util.globals import *
+
+REMOTE_URL = f"{REMOTE_ROOT_URL}/data/dsets/attribute_snippets.json"
 
 
 class AttributeSnippets:

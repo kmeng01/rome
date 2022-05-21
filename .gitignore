@@ -1,8 +1,13 @@
 # Pipeline dumps
 results
 data
-weights/
 *_tmp_*_.json
+
+# Dataset materials
+dsets/compiled
+
+# Pre-trained hypernetworks
+baselines/*/weights
 
 # Mac specific
 .idea

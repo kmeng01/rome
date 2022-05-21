@@ -1,18 +1,15 @@
 import os
 from copy import deepcopy
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict
 
 import hydra
-import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from util import nethook
+from util.globals import *
 
 from .algs.mend import MEND
 from .mend_hparams import MENDHyperParams
-
-ROOT_URL = "https://rome.baulab.info"
 
 
 class MendRewriteExecutor:
@@ -36,7 +33,7 @@ class MendRewriteExecutor:
 
         os.makedirs(model_dir, exist_ok=True)
         if not os.path.isfile(f"{model_dir}/{model_filename}"):
-            remote_url = f"{ROOT_URL}/data/weights/{model_filename}"
+            remote_url = f"{REMOTE_ROOT_URL}/data/weights/{model_filename}"
             print(f"Attemping to download from {remote_url}")
             torch.hub.download_url_to_file(remote_url, f"{model_dir}/{model_filename}")
         with hydra.initialize(config_path="config", job_name="run"):

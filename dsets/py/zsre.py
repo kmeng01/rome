@@ -3,7 +3,9 @@ import json
 from pathlib import Path
 from transformers import AutoTokenizer
 
-REMOTE_URL = "https://rome.baulab.info/data/misc/zsre_mend.json"
+from util.globals import *
+
+REMOTE_URL = f"{REMOTE_ROOT_URL}/data/dsets/zsre_mend_eval.json"
 
 
 class MENDQADataset:
@@ -15,7 +17,7 @@ class MENDQADataset:
 
     def __init__(self, data_dir: str, tok: AutoTokenizer, *args, **kwargs):
         data_dir = Path(data_dir)
-        zsre_loc = data_dir / "zsre_mend.json"
+        zsre_loc = data_dir / "zsre_mend_eval.json"
         if not zsre_loc.exists():
             print(f"{zsre_loc} does not exist. Downloading from {REMOTE_URL}")
             data_dir.mkdir(exist_ok=True, parents=True)
