@@ -75,10 +75,22 @@ def execute_ft(
     weights_copy = {k: v.detach().clone() for k, v in weights.items()}
 
     # Define inputs
-    inputs = tok(
-        [request["prompt"].format(request["subject"])], return_tensors="pt"
-    ).to("cuda")
-    target_id = tok([request["target_new"]["str"]])["input_ids"][0][0]
+    target_ids = tok([request["target_new"]["str"]], return_tensors="pt")[
+        "input_ids"
+    ].to("cuda")
+    prompts = [
+        request["prompt"].format(request["subject"]) + tok.decode(target_ids[0][:-1])
+    ]
+    input_tok = tok(prompts, return_tensors="pt").to("cuda")
+
+    # Compute rewriting targets
+    targets = torch.tensor(-100, device="cuda").repeat(*input_tok["input_ids"].shape)
+    for i in range(len(prompts)):
+        ex_len = input_tok["attention_mask"][i].sum()
+        targets[i, ex_len - len(target_ids[i]) : ex_len] = target_ids[i]
+    targets_gather, targets_mask = targets.detach().clone(), targets.detach().clone()
+    targets_gather[targets_gather == -100] = 0
+    targets_mask = (targets_mask != -100).float()
 
     # Configure optimizer / gradients
     opt = torch.optim.Adam(
@@ -91,12 +103,20 @@ def execute_ft(
 
     # Update loop: intervene at layers simultaneously
     for it in range(hparams.num_steps):
+        assert (
+            input_tok["input_ids"].size(0) == 1
+        ), f"Multiple concurrent optimizations not yet supported."
         opt.zero_grad()
-        probs = torch.nn.functional.log_softmax(model(**inputs).logits[0, -1, :], dim=0)
-        loss = -probs[target_id]
+        probs = torch.nn.functional.log_softmax(model(**input_tok).logits[0], dim=1)
+        probs = (
+            torch.gather(probs, 1, targets_gather.squeeze().unsqueeze(1))
+            .squeeze()
+            .unsqueeze(0)
+        )
+        loss = -(probs * targets_mask).sum() / targets_mask.sum()
         print(
-            f"loss {loss.item()} prob of [{tok.decode([target_id])}] "
-            f"{torch.exp(probs[target_id]).item()}"
+            f"loss {loss.item()} prob of [{tok.decode(target_ids[0])}] "
+            f"{torch.exp(-loss).item()}"
         )
 
         if not loss.item() < 1e-2:

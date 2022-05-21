@@ -1,19 +1,14 @@
 import os
 from copy import deepcopy
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict
 
 import hydra
-import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from util import nethook
+from util.globals import *
 
 from .algs.efk import EFK
 from .efk_hparams import EFKHyperParams
-
-
-ROOT_URL = "https://rome.baulab.info"
 
 
 class EfkRewriteExecutor:
@@ -23,16 +18,18 @@ class EfkRewriteExecutor:
         self.is_init = False
 
     def init_model(self, model, tok, params):
-        cf = "counterfact-" if params.counterfact else ""
+        train_ds = (
+            "counterfact-" if params.counterfact else ("zsre-" if params.zsre else "")
+        )
 
         modelcode = "gpt2xl" if params.model_name == "gpt2-xl" else "gpt-j-6b"
-        model_filename = f"efk-{params.n_toks}tok-{cf}gpt2-xl.pt"
+        model_filename = f"efk-{params.n_toks}tok-{train_ds}gpt2-xl.pt"
         model_dir = "baselines/efk/weights"
 
         os.makedirs(model_dir, exist_ok=True)
         if not os.path.isfile(f"{model_dir}/{model_filename}"):
             torch.hub.download_url_to_file(
-                f"{ROOT_URL}/data/weights/{model_filename}",
+                f"{REMOTE_ROOT_URL}/data/weights/{model_filename}",
                 f"{model_dir}/{model_filename}",
             )
         with hydra.initialize(config_path="config", job_name="run"):

@@ -1,8 +1,10 @@
-# Pipeline dumps
+# Pipeline dumps, data directory
 results
 data
-weights/
 *_tmp_*_.json
+
+# Pre-trained hypernetworks
+baselines/*/weights
 
 # Mac specific
 .idea

@@ -6,9 +6,8 @@
   DATA_DIR: "data"
   STATS_DIR: "data/stats"
 
-  # Dataset files
-  COUNTERFACT_DIR: "counterfact/compiled"
-  TFIDF_DIR: "counterfact/tfidf"
-
   # Hyperparameters
   HPARAMS_DIR: "hparams"
+
+  # Remote URLs
+  REMOTE_ROOT_URL: "https://rome.baulab.info"
