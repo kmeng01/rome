@@ -6,9 +6,6 @@
   DATA_DIR: "data"
   STATS_DIR: "data/stats"
 
-  # Dataset files
-  TFIDF_DIR: "dsets/tfidf"
-
   # Hyperparameters
   HPARAMS_DIR: "hparams"
 

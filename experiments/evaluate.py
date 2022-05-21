@@ -8,7 +8,7 @@ from typing import Union, Tuple
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from dsets import AttributeSnippets, CounterFactDataset, MENDQADataset
-from dsets.tfidf.tfidf_stats import get_tfidf_vectorizer
+from dsets import get_tfidf_vectorizer
 
 from util import nethook
 from util.globals import *
@@ -97,7 +97,7 @@ def main(
     # Load data
     print("Loading dataset, attribute snippets, tf-idf data")
     snips = AttributeSnippets(DATA_DIR) if not skip_generation_tests else None
-    vec = get_tfidf_vectorizer(TFIDF_DIR) if not skip_generation_tests else None
+    vec = get_tfidf_vectorizer(DATA_DIR) if not skip_generation_tests else None
 
     ds_class, ds_eval_method = DS_DICT[ds_name]
     ds = ds_class(DATA_DIR, size=dataset_size_limit, tok=tok)
