@@ -15,4 +15,3 @@ with open("globals.yml", "r") as stream:
 )
 
 REMOTE_ROOT_URL = data["REMOTE_ROOT_URL"]
-print("REMOTE_ROOT_URL", REMOTE_ROOT_URL)
