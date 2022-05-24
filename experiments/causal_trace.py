@@ -22,7 +22,7 @@ def main():
     aa(
         "--model_name",
         default="gpt2-xl",
-        choices=["gpt2-xl", "EleutherAI/gpt-j-6B", "EleutherAI/gpt-neo-2.7B"],
+        choices=["gpt2-xl", "EleutherAI/gpt-j-6B", "EleutherAI/gpt-neox-20b"],
     )
     aa("--fact_file", default="counterfact/compiled/known_1000.json")
     aa("--output_dir", default="results/{model_name}/causal_trace")
@@ -35,7 +35,10 @@ def main():
     os.makedirs(result_dir, exist_ok=True)
     os.makedirs(pdf_dir, exist_ok=True)
 
-    mt = ModelAndTokenizer(args.model_name)
+    # Half precision to let the 20b model fit.
+    torch_dtype = torch.float16 if '20b' in args.model_name else None
+
+    mt = ModelAndTokenizer(args.model_name, torch_dtype=torch_dtype)
 
     with open(args.fact_file) as f:
         knowns = json.load(f)
@@ -50,6 +53,7 @@ def main():
                     mt,
                     knowledge["prompt"],
                     knowledge["subject"],
+                    expect=knowledge["attribute"],
                     kind=kind,
                     noise=args.noise_level,
                 )
@@ -60,6 +64,9 @@ def main():
                 numpy.savez(filename, **numpy_result)
             else:
                 numpy_result = numpy.load(filename, allow_pickle=True)
+            if not result["correct_prediction"]:
+                tqdm.write(f"Skipping {knowledge['prompt']}")
+                continue
             plot_result = dict(numpy_result)
             plot_result["kind"] = kind
             pdfname = f'{pdf_dir}/{str(numpy_result["answer"]).strip()}_{known_id}{kind_suffix}.pdf'
@@ -212,7 +219,7 @@ def trace_with_repatch(
 
 
 def calculate_hidden_flow(
-    mt, prompt, subject, samples=10, noise=0.1, window=10, kind=None
+    mt, prompt, subject, samples=10, noise=0.1, window=10, kind=None, expect=None
 ):
     """
     Runs causal tracing over every token/layer combination in the network
@@ -222,6 +229,8 @@ def calculate_hidden_flow(
     with torch.no_grad():
         answer_t, base_score = [d[0] for d in predict_from_input(mt.model, inp)]
     [answer] = decode_tokens(mt.tokenizer, [answer_t])
+    if expect is not None and answer.strip() != expect:
+        return dict(correct_prediction=False)
     e_range = find_token_range(mt.tokenizer, inp["input_ids"][0], subject)
     low_score = trace_with_patch(
         mt.model, inp, [], answer_t, e_range, noise=noise
@@ -251,6 +260,7 @@ def calculate_hidden_flow(
         subject_range=e_range,
         answer=answer,
         window=window,
+        correct_prediction=True,
         kind=kind or "",
     )
 
