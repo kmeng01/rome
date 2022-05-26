@@ -70,7 +70,7 @@ def main():
             plot_result = dict(numpy_result)
             plot_result["kind"] = kind
             pdfname = f'{pdf_dir}/{str(numpy_result["answer"]).strip()}_{known_id}{kind_suffix}.pdf'
-            if True or known_id > 200:
+            if known_id > 200:
                 continue
             plot_trace_heatmap(plot_result, savepdf=pdfname)
 
