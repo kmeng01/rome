@@ -22,9 +22,9 @@ def main():
     aa(
         "--model_name",
         default="gpt2-xl",
-        choices=["gpt2-xl", "EleutherAI/gpt-j-6B", "EleutherAI/gpt-neo-2.7B"],
+        choices=["gpt2-xl", "EleutherAI/gpt-j-6B", "EleutherAI/gpt-neox-20b"],
     )
-    aa("--fact_file", default="counterfact/data/known_by_gpt2xl.json")
+    aa("--fact_file", default="counterfact/compiled/known_1000.json")
     aa("--output_dir", default="results/{model_name}/causal_trace")
     aa("--noise_level", default=0.1, type=float)
     args = parser.parse_args()
@@ -35,7 +35,10 @@ def main():
     os.makedirs(result_dir, exist_ok=True)
     os.makedirs(pdf_dir, exist_ok=True)
 
-    mt = ModelAndTokenizer(args.model_name)
+    # Half precision to let the 20b model fit.
+    torch_dtype = torch.float16 if '20b' in args.model_name else None
+
+    mt = ModelAndTokenizer(args.model_name, torch_dtype=torch_dtype)
 
     with open(args.fact_file) as f:
         knowns = json.load(f)
@@ -50,6 +53,7 @@ def main():
                     mt,
                     knowledge["prompt"],
                     knowledge["subject"],
+                    expect=knowledge["attribute"],
                     kind=kind,
                     noise=args.noise_level,
                 )
@@ -60,6 +64,9 @@ def main():
                 numpy.savez(filename, **numpy_result)
             else:
                 numpy_result = numpy.load(filename, allow_pickle=True)
+            if not result["correct_prediction"]:
+                tqdm.write(f"Skipping {knowledge['prompt']}")
+                continue
             plot_result = dict(numpy_result)
             plot_result["kind"] = kind
             pdfname = f'{pdf_dir}/{str(numpy_result["answer"]).strip()}_{known_id}{kind_suffix}.pdf'
@@ -105,12 +112,14 @@ def trace_with_patch(
     for t, l in states_to_patch:
         patch_spec[l].append(t)
 
+    embed_layername = layername(model, 0, 'embed')
+
     def untuple(x):
         return x[0] if isinstance(x, tuple) else x
 
     # Define the model-patching rule.
     def patch_rep(x, layer):
-        if layer == "transformer.wte":
+        if layer == embed_layername:
             # If requested, we corrupt a range of token embeddings on batch items x[1:]
             if tokens_to_mix is not None:
                 b, e = tokens_to_mix
@@ -131,7 +140,7 @@ def trace_with_patch(
     additional_layers = [] if trace_layers is None else trace_layers
     with torch.no_grad(), nethook.TraceDict(
         model,
-        ["transformer.wte"] + list(patch_spec.keys()) + additional_layers,
+        [embed_layername] + list(patch_spec.keys()) + additional_layers,
         edit_output=patch_rep,
     ) as td:
         outputs_exp = model(**inp)
@@ -166,12 +175,14 @@ def trace_with_repatch(
     for t, l in states_to_unpatch:
         unpatch_spec[l].append(t)
 
+    embed_layername = layername(model, 0, 'embed')
+
     def untuple(x):
         return x[0] if isinstance(x, tuple) else x
 
     # Define the model-patching rule.
     def patch_rep(x, layer):
-        if layer == "transformer.wte":
+        if layer == embed_layername:
             # If requested, we corrupt a range of token embeddings on batch items x[1:]
             if tokens_to_mix is not None:
                 b, e = tokens_to_mix
@@ -194,7 +205,7 @@ def trace_with_repatch(
     for first_pass in [True, False] if states_to_unpatch else [False]:
         with torch.no_grad(), nethook.TraceDict(
             model,
-            ["transformer.wte"] + list(patch_spec.keys()) + list(unpatch_spec.keys()),
+            [embed_layername] + list(patch_spec.keys()) + list(unpatch_spec.keys()),
             edit_output=patch_rep,
         ) as td:
             outputs_exp = model(**inp)
@@ -208,7 +219,7 @@ def trace_with_repatch(
 
 
 def calculate_hidden_flow(
-    mt, prompt, subject, samples=10, noise=0.1, window=10, kind=None
+    mt, prompt, subject, samples=10, noise=0.1, window=10, kind=None, expect=None
 ):
     """
     Runs causal tracing over every token/layer combination in the network
@@ -218,6 +229,8 @@ def calculate_hidden_flow(
     with torch.no_grad():
         answer_t, base_score = [d[0] for d in predict_from_input(mt.model, inp)]
     [answer] = decode_tokens(mt.tokenizer, [answer_t])
+    if expect is not None and answer.strip() != expect:
+        return dict(correct_prediction=False)
     e_range = find_token_range(mt.tokenizer, inp["input_ids"][0], subject)
     low_score = trace_with_patch(
         mt.model, inp, [], answer_t, e_range, noise=noise
@@ -247,6 +260,7 @@ def calculate_hidden_flow(
         subject_range=e_range,
         answer=answer,
         window=window,
+        correct_prediction=True,
         kind=kind or "",
     )
 
@@ -260,7 +274,7 @@ def trace_important_states(model, num_layers, inp, e_range, answer_t, noise=0.1)
             r = trace_with_patch(
                 model,
                 inp,
-                [(tnum, layername(layer))],
+                [(tnum, layername(model, layer))],
                 answer_t,
                 tokens_to_mix=e_range,
                 noise=noise,
@@ -279,7 +293,7 @@ def trace_important_window(
         row = []
         for layer in range(num_layers):
             layerlist = [
-                (tnum, layername(L, kind))
+                (tnum, layername(model, L, kind))
                 for L in range(
                     max(0, layer - window // 2), min(num_layers, layer - (-window // 2))
                 )
@@ -300,7 +314,8 @@ class ModelAndTokenizer:
     """
 
     def __init__(
-        self, model_name=None, model=None, tokenizer=None, low_cpu_mem_usage=False
+        self, model_name=None, model=None, tokenizer=None, low_cpu_mem_usage=False,
+        torch_dtype=None,
     ):
         if tokenizer is None:
             assert model_name is not None
@@ -308,20 +323,19 @@ class ModelAndTokenizer:
         if model is None:
             assert model_name is not None
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, low_cpu_mem_usage=low_cpu_mem_usage
+                model_name, low_cpu_mem_usage=low_cpu_mem_usage,
+                torch_dtype=torch_dtype
             )
             nethook.set_requires_grad(False, model)
             model.eval().cuda()
         self.tokenizer = tokenizer
         self.model = model
-        self.num_layers = len(
-            [
+        self.layer_names = [
                 n
                 for n, m in model.named_modules()
-                if re.match(r"^transformer\.h\.\d+$", n)
-            ]
-        )
-        assert self.num_layers > 0
+                if (re.match(r"^(transformer|gpt_neox)\.(h|layers)\.\d+$", n))
+        ]
+        self.num_layers = len(self.layer_names)
 
     def __repr__(self):
         return (
@@ -330,10 +344,18 @@ class ModelAndTokenizer:
             f"tokenizer: {type(self.tokenizer).__name__})"
         )
 
-
-def layername(num, kind=None):
-    return f"transformer.h.{num}" if not kind else f"transformer.h.{num}.{kind}"
-
+def layername(model, num, kind=None):
+    if hasattr(model, 'transformer'):
+        if kind == 'embed':
+            return 'transformer.wte'
+        return f'transformer.h.{num}{"" if kind is None else "." + kind}'
+    if hasattr(model, 'gpt_neox'):
+        if kind == 'embed':
+            return 'gpt_neox.embed_in'
+        if kind == 'attn':
+            kind = 'attention'
+        return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
+    assert False, 'unknown transformer structure'
 
 def guess_subject(prompt):
     return re.search(r"(?!Wh(o|at|ere|en|ich|y) )([A-Z]\S*)(\s[A-Z][a-z']*)*", prompt)[
@@ -352,7 +374,7 @@ def plot_hidden_flow(
     plot_trace_heatmap(result, savepdf)
 
 
-def plot_trace_heatmap(result, savepdf=None, title=None, xlabel=None):
+def plot_trace_heatmap(result, savepdf=None, title=None, xlabel=None, modelname=None):
     differences = result["scores"]
     low_score = result["low_score"]
     answer = result["answer"]
@@ -380,9 +402,11 @@ def plot_trace_heatmap(result, savepdf=None, title=None, xlabel=None):
         ax.set_xticks([0.5 + i for i in range(0, differences.shape[1] - 6, 5)])
         ax.set_xticklabels(list(range(0, differences.shape[1] - 6, 5)))
         ax.set_yticklabels(labels)
+        if not modelname:
+            modelname = 'GPT'
         if not kind:
             ax.set_title("Impact of restoring state after corrupted input")
-            ax.set_xlabel("single restored layer within GPT-2-XL")
+            ax.set_xlabel(f"single restored layer within {modelname}")
         else:
             kindname = "MLP" if kind == "mlp" else "Attn"
             ax.set_title(f"Impact of restoring {kindname} after corrupted input")
@@ -417,11 +441,11 @@ def make_inputs(tokenizer, prompts, device="cuda"):
     else:
         pad_id = 0
     input_ids = [[pad_id] * (maxlen - len(t)) + t for t in token_lists]
-    position_ids = [[0] * (maxlen - len(t)) + list(range(len(t))) for t in token_lists]
+    # position_ids = [[0] * (maxlen - len(t)) + list(range(len(t))) for t in token_lists]
     attention_mask = [[0] * (maxlen - len(t)) + [1] * len(t) for t in token_lists]
     return dict(
         input_ids=torch.tensor(input_ids).to(device),
-        position_ids=torch.tensor(position_ids).to(device),
+    #    position_ids=torch.tensor(position_ids).to(device),
         attention_mask=torch.tensor(attention_mask).to(device),
     )
 
