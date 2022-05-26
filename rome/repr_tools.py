@@ -10,13 +10,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from util import nethook
 
 
-def get_repr_at_word_last_token(
+def get_repr_at_word_token(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
     context_template: str,
     word: str,
     layer: int,
     module_template: str,
+    subtoken: str,
     track: str = "in",
 ) -> torch.Tensor:
     """
@@ -25,7 +26,7 @@ def get_repr_at_word_last_token(
     for more details.
     """
 
-    idxs = get_last_word_idx_in_template(tok, context_template, word)
+    idxs = get_word_idx_in_template(tok, context_template, word, subtoken)
     return get_repr_at_idxs(
         model,
         tok,
@@ -77,8 +78,8 @@ def get_repr_at_idxs(
     return torch.stack([cur_repr[0, i, :] for i in idxs], dim=1).mean(1)
 
 
-def get_last_word_idx_in_template(
-    tok: AutoTokenizer, context_template: str, word: str
+def get_word_idx_in_template(
+    tok: AutoTokenizer, context_template: str, word: str, subtoken: str
 ) -> int:
     """
     Given a template string `context_template` with *one* format specifier
@@ -99,4 +100,16 @@ def get_last_word_idx_in_template(
         prefix = prefix[:-1]
 
     prefix_tok, word_tok, suffix_tok = tok([prefix, word, suffix])["input_ids"]
-    return [len(prefix_tok) + len(word_tok) - 1]  # retrieves last index of `word`
+
+    if subtoken == "last" or subtoken == "first_after_last":
+        return [
+            len(prefix_tok)
+            + len(word_tok)
+            - (1 if subtoken == "last" or len(suffix_tok) == 0 else 0)
+            # If suffix is empty, there is no "first token after the last".
+            # So, just return the last token of the word.
+        ]
+    elif subtoken == "first":
+        return [len(prefix_tok)]
+    else:
+        raise ValueError(f"Unknown subtoken type: {subtoken}")

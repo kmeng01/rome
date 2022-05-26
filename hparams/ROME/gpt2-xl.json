@@ -1,13 +1,14 @@
 {
     "layers": [
-        16
-    ],
+        17
+],
     "fact_token": "subject_last",
     "v_num_grad_steps": 20,
     "v_lr": 5e-1,
     "v_loss_layer": 47,
-    "v_weight_decay": 0.2,
-    "kl_factor": 5e2,
+    "v_weight_decay": 0.5,
+    "clamp_norm_factor": 4,
+    "kl_factor": 0.0625,
     "mom2_adjustment": true,
     "rewrite_module_tmp": "transformer.h.{}.mlp.c_proj",
     "layer_module_tmp": "transformer.h.{}",

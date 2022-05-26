@@ -2,5 +2,7 @@
     "lr_scale": 1.0,
     "n_toks": 10,
     "model_name": "gpt2-xl",
-    "counterfact": false
+    "counterfact": false,
+    "zsre": false,
+    "mini": false
 }

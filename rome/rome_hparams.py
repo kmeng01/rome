@@ -5,11 +5,12 @@ class ROMEHyperParams(HyperParams):
     KEYS = [
         # Method
         "layers",
-        "fact_token",
+        "fact_token",  # [last, subject_first, subject_last, subject_first_after_last]
         "v_num_grad_steps",
         "v_lr",
         "v_loss_layer",
         "v_weight_decay",
+        "clamp_norm_factor",
         "kl_factor",
         "mom2_adjustment",
         # Module templates

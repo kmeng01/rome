@@ -1,15 +1,10 @@
 import collections
 import json
-import os
-from pathlib import Path
 from typing import List, Optional
-
 import numpy as np
-from dotenv import load_dotenv
+from pprint import pprint
 
-# Load directory configurations
-load_dotenv()
-RESULTS_DIR = Path(os.getenv("RESULTS_DIR"))
+from util.globals import *
 
 
 def main(
@@ -32,8 +27,11 @@ def main(
         files = list(run_dir.glob("case_*.json"))
         files.sort(key=lambda x: int(str(x).split("_")[-1].split(".")[0]))
         for case_file in files:
-            with open(case_file, "r") as f:
-                data = json.load(f)
+            try:
+                with open(case_file, "r") as f:
+                    data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Could not decode {case_file} due to format error; skipping.")
 
             case_id = data["case_id"]
             if first_n_cases is not None and case_id >= first_n_cases:
@@ -44,8 +42,12 @@ def main(
             for prefix in ["pre", "post"]:
                 # Probability metrics for which new should be lower (better) than true
                 for key in ["rewrite_prompts_probs", "paraphrase_prompts_probs"]:
+                    if prefix not in data or key not in data[prefix]:
+                        continue
+
                     sum_key_discrete = f"{prefix}_{key.split('_')[0]}_success"
                     sum_key_cont = f"{prefix}_{key.split('_')[0]}_diff"
+
                     cur_sum[sum_key_discrete].append(
                         np.mean(
                             [
@@ -67,26 +69,41 @@ def main(
                 sum_key_discrete = f"{prefix}_neighborhood_success"
                 sum_key_cont = f"{prefix}_neighborhood_diff"
                 key = "neighborhood_prompts_probs"
-                cur_sum[sum_key_discrete].append(
-                    np.mean(
-                        [x["target_true"] < x["target_new"] for x in data[prefix][key]]
+                if prefix in data and key in data[prefix]:
+                    cur_sum[sum_key_discrete].append(
+                        np.mean(
+                            [
+                                x["target_true"] < x["target_new"]
+                                for x in data[prefix][key]
+                            ]
+                        )
                     )
-                )
-                cur_sum[sum_key_cont].append(
-                    np.mean(
-                        [
-                            np.exp(-x["target_true"]) - np.exp(-x["target_new"])
-                            for x in data[prefix][key]
-                        ]
+                    cur_sum[sum_key_cont].append(
+                        np.mean(
+                            [
+                                np.exp(-x["target_true"]) - np.exp(-x["target_new"])
+                                for x in data[prefix][key]
+                            ]
+                        )
                     )
-                )
 
-                # Numerical metrics that can be directly averaged
+                # zsRE evaluation metrics
+                for key in ["rewrite", "paraphrase", "neighborhood"]:
+                    sum_key = f"{prefix}_{key}_acc"
+                    key = f"{key}_prompts_correct"
+
+                    if prefix not in data or key not in data[prefix]:
+                        continue
+
+                    cur_sum[sum_key].append(np.mean(data[prefix][key]))
+
+                # Generation metrics that can be directly averaged
                 for key in ["ngram_entropy", "reference_score", "essence_score"]:
-                    if (
-                        key in data[prefix] and data[prefix][key] is not None
-                    ):  # Generation may have been skipped during eval
+                    if prefix in data and key in data[prefix]:
                         cur_sum[f"{prefix}_{key}"].append(data[prefix][key])
+
+        if len(cur_sum) == 0:
+            continue
 
         num_items = len(cur_sum[next(iter(cur_sum.keys()))])
         metadata = {
@@ -103,7 +120,7 @@ def main(
                 cur_sum[k] = tuple(np.around(z * 100, 2) for z in v)
 
         cur_sum.update(metadata)
-        print(cur_sum)
+        pprint(cur_sum)
         summaries.append(cur_sum)
 
     return uncompressed if get_uncompressed else summaries

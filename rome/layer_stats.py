@@ -1,12 +1,12 @@
 import os
 import torch
 from pathlib import Path
-from dotenv import load_dotenv
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from util.nethook import Trace, set_requires_grad
 from util.runningstats import CombinedStat, tally, SecondMoment, Mean, NormMean
+from util.globals import *
 from .tok_dataset import (
     TokenizedDataset,
     dict_to_,
@@ -14,7 +14,6 @@ from .tok_dataset import (
     length_collation,
 )
 
-load_dotenv()
 STAT_TYPES = {
     "mom2": SecondMoment,
     "mean": Mean,
@@ -40,7 +39,7 @@ def main():
     aa("--sample_size", default=100000, type=lambda x: None if x == "all" else int(x))
     aa("--batch_tokens", default=None, type=lambda x: None if x == "any" else int(x))
     aa("--precision", default="float32", choices=["float64", "float32", "float16"])
-    aa("--stats_dir", default=os.getenv("STATS_DIR"))
+    aa("--stats_dir", default=STATS_DIR)
     aa("--download", default=1, type=int, choices=[0, 1])
     args = parser.parse_args()
 
