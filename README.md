@@ -153,7 +153,7 @@ python3 -m experiments/summarize --alg_name=ROME --run_name=run_001
 
 ```bibtex
 @article{meng2022locating,
-  title={Locating and Editing Factual Knowledge in GPT},
+  title={{L}ocating and {E}diting {F}actual {K}nowledge in {GPT}},
   author={Kevin Meng and David Bau and Alex Andonian and Yonatan Belinkov},
   journal={arXiv preprint arXiv:2202.05262},
   year={2022}
