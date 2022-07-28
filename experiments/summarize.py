@@ -3,6 +3,7 @@ import json
 from typing import List, Optional
 import numpy as np
 from pprint import pprint
+from scipy.stats import hmean
 
 from util.globals import *
 
@@ -114,6 +115,8 @@ def main(
         uncompressed.append(dict(cur_sum, **metadata))
 
         cur_sum = {k: (np.mean(v), np.std(v)) for k, v in cur_sum.items()}
+        for prefix in ["pre", "post"]:
+            cur_sum[f"{prefix}_score"] = (hmean([cur_sum[f"{prefix}_paraphrase_success"][0], cur_sum[f"{prefix}_neighborhood_success"][0]]), np.nan)
         for k, v in cur_sum.items():
             if all(exclude not in k for exclude in ["essence_score", "time"]):
                 # Constant multiplication scales linearly with mean and stddev
