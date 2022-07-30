@@ -27,6 +27,7 @@ def get_reprs_at_word_tokens(
     """
 
     idxs = get_words_idxs_in_templates(tok, context_templates, words, subtoken)
+    print(context_templates, idxs)
     return get_reprs_at_idxs(
         model,
         tok,
@@ -130,14 +131,15 @@ def get_reprs_at_idxs(
             to_return[key].append(cur_repr[i][idx_list].mean(0))
 
     for batch_contexts, batch_idxs in _batch(n=512):
+        print(batch_contexts, batch_idxs)
         contexts_tok = tok(batch_contexts, padding=True, return_tensors="pt").to(
             next(model.parameters()).device
         )
 
         with torch.no_grad():
             with nethook.Trace(
-                model,
-                module_name,
+                module=model,
+                layer=module_name,
                 retain_input=tin,
                 retain_output=tout,
             ) as tr:

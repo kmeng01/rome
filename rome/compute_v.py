@@ -234,15 +234,15 @@ def get_module_input_output_at_word(
         )[0]
     elif fact_token_strategy == "last":
         context_info = dict(
-            context=context_template.format(word),
-            idxs=[-1],
+            contexts=[context_template.format(word)],
+            idxs=[[-1]],
         )
         l_input = repr_tools.get_repr_at_idxs(
             track="in", **context_info, **word_repr_args
-        )
+        )[0]
         l_output = repr_tools.get_repr_at_idxs(
             track="out", **context_info, **word_repr_args
-        )
+        )[0]
     else:
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")
 
