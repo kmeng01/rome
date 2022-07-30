@@ -13,6 +13,7 @@ class ROMEHyperParams(HyperParams):
         "clamp_norm_factor",
         "kl_factor",
         "mom2_adjustment",
+        "context_template_length_params",
         # Module templates
         "rewrite_module_tmp",
         "layer_module_tmp",

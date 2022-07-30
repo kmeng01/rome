@@ -10,6 +10,7 @@
     "clamp_norm_factor": 4,
     "kl_factor": 0.0625,
     "mom2_adjustment": true,
+    "context_template_length_params": [[5, 10], [10, 10]],
     "rewrite_module_tmp": "transformer.h.{}.mlp.fc_out",
     "layer_module_tmp": "transformer.h.{}",
     "mlp_module_tmp": "transformer.h.{}.mlp",

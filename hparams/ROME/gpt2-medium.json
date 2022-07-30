@@ -1,13 +1,13 @@
 {
     "layers": [
-        17
+        8
 ],
     "fact_token": "subject_last",
     "v_num_grad_steps": 20,
     "v_lr": 5e-1,
-    "v_loss_layer": 47,
+    "v_loss_layer": 23,
     "v_weight_decay": 0.5,
-    "clamp_norm_factor": 4,
+    "clamp_norm_factor": 3,
     "kl_factor": 0.0625,
     "mom2_adjustment": true,
     "context_template_length_params": [[5, 10], [10, 10]],

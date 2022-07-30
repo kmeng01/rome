@@ -87,7 +87,12 @@ def execute_rome(
     for layer in sorted(hparams.layers):
         # Compute rank-1 update matrix
         left_vector: torch.Tensor = compute_u(
-            model, tok, request, hparams, layer, get_context_templates(model, tok)
+            model,
+            tok,
+            request,
+            hparams,
+            layer,
+            get_context_templates(model, tok, hparams.context_template_length_params),
         )
         print("Left vector shape:", left_vector.shape)
         right_vector: torch.Tensor = compute_v(
@@ -97,7 +102,7 @@ def execute_rome(
             hparams,
             layer,
             left_vector,
-            get_context_templates(model, tok),
+            get_context_templates(model, tok, hparams.context_template_length_params),
         )
         print("Right vector shape:", right_vector.shape)
 
@@ -141,7 +146,7 @@ def upd_matrix_match_shape(matrix: torch.Tensor, shape: torch.Size) -> torch.Ten
         )
 
 
-def get_context_templates(model, tok):
+def get_context_templates(model, tok, length_params):
     global CONTEXT_TEMPLATES_CACHE
 
     if CONTEXT_TEMPLATES_CACHE is None:
@@ -156,7 +161,7 @@ def get_context_templates(model, tok):
                         n_gen_per_prompt=n_gen,
                         max_out_len=length,
                     )
-                    for length, n_gen in [(5, 10), (10, 10)]
+                    for length, n_gen in length_params
                 ),
                 [],
             )

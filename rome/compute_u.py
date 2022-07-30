@@ -79,27 +79,23 @@ def compute_u(
     if "subject_" in hparams.fact_token and hparams.fact_token.index("subject_") == 0:
         word = request["subject"]
         print(f"Selected u projection object {word}")
-        cur_repr = torch.stack(
-            [  # TODO batch this to improve performance
-                repr_tools.get_repr_at_word_token(
-                    context_template=templ.format(request["prompt"]),
-                    word=word,
-                    subtoken=hparams.fact_token[len("subject_") :],
-                    **word_repr_args,
-                )
-                for templ in context_templates
+        cur_repr = repr_tools.get_reprs_at_word_tokens(
+            context_templates=[
+                templ.format(request["prompt"]) for templ in context_templates
             ],
-            dim=0,
+            words=[word for _ in range(len(context_templates))],
+            subtoken=hparams.fact_token[len("subject_") :],
+            **word_repr_args,
         ).mean(0)
     elif hparams.fact_token == "last":
         # Heuristic to choose last word. Not a huge deal if there's a minor
         # edge case (e.g. multi-token word) because the function below will
         # take the last token.
-        cur_repr = repr_tools.get_repr_at_idxs(
+        cur_repr = repr_tools.get_reprs_at_idxs(
             context=request["prompt"].format(request["subject"]),
-            idxs=[-1],
+            idxs=[[-1]],
             **word_repr_args,
-        )
+        )[0]
         print("Selected u projection token with last token")
     else:
         raise ValueError(f"fact_token={hparams.fact_token} not recognized")
