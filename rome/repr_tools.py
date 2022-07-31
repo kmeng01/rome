@@ -6,6 +6,7 @@ from string templates. Used in computing the left and right vectors for ROME.
 from typing import List
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from copy import deepcopy
 
 from util import nethook
 
@@ -27,7 +28,6 @@ def get_reprs_at_word_tokens(
     """
 
     idxs = get_words_idxs_in_templates(tok, context_templates, words, subtoken)
-    print(context_templates, idxs)
     return get_reprs_at_idxs(
         model,
         tok,
@@ -57,6 +57,7 @@ def get_words_idxs_in_templates(
     prefixes, suffixes = [
         tmp[: fill_idxs[i]] for i, tmp in enumerate(context_templates)
     ], [tmp[fill_idxs[i] + 2 :] for i, tmp in enumerate(context_templates)]
+    words = deepcopy(words)
 
     # Pre-process tokens
     for i, prefix in enumerate(prefixes):
@@ -131,7 +132,6 @@ def get_reprs_at_idxs(
             to_return[key].append(cur_repr[i][idx_list].mean(0))
 
     for batch_contexts, batch_idxs in _batch(n=512):
-        print(batch_contexts, batch_idxs)
         contexts_tok = tok(batch_contexts, padding=True, return_tensors="pt").to(
             next(model.parameters()).device
         )
