@@ -97,6 +97,7 @@ def compute_rewrite_quality_counterfact(
             consistency_texts,
             essence_texts,
             vec,
+            seed=record["case_id"],
         )
         ret.update(gen_stats)
 
@@ -153,6 +154,7 @@ def test_generation(
     consistency_texts: typing.List[str],
     essence_texts: typing.List[str],
     vec: TfidfVectorizer,
+    seed: int,
 ):
     gen_texts = generate_fast(
         model,
@@ -160,7 +162,7 @@ def test_generation(
         prefixes,
         n_gen_per_prompt=1,
         max_out_len=100,
-        reseed=7380,
+        reseed=seed,
     )
 
     ngram_entropy = n_gram_entropy(gen_texts)
