@@ -1,6 +1,6 @@
 ---
   # Result files
-  RESULTS_DIR: "results"
+  RESULTS_DIR: "results_human_eval"
 
   # Data files
   DATA_DIR: "data"

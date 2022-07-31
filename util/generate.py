@@ -80,6 +80,7 @@ def generate_fast(
     n_gen_per_prompt: int = 1,
     top_k: int = 5,
     max_out_len: int = 200,
+    reseed=None,
 ):
     """
     Fast, parallelized auto-regressive text generation with top-k sampling.
@@ -99,6 +100,10 @@ def generate_fast(
     # stored in `past_key_values`. At each step, we are generating the
     # next token for the index at `cur_context.stop + 1`.
     past_key_values, cur_context = None, slice(0, attention_mask.sum(1).min().item())
+
+    if reseed is not None:
+        print("Reseeding pRNG with {}".format(reseed))
+        torch.manual_seed(reseed)
 
     with torch.no_grad():
         while input_ids.size(1) < max_out_len:  # while not exceeding max output length

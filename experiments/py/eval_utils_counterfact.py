@@ -160,6 +160,7 @@ def test_generation(
         prefixes,
         n_gen_per_prompt=1,
         max_out_len=100,
+        reseed=7380,
     )
 
     ngram_entropy = n_gram_entropy(gen_texts)

@@ -1,5 +1,6 @@
 # Pipeline dumps, data directory
 results
+results_human_eval
 data
 *_tmp_*_.json
 
