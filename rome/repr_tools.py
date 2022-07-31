@@ -6,6 +6,7 @@ from string templates. Used in computing the left and right vectors for ROME.
 from typing import List
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from copy import deepcopy
 
 from util import nethook
 
@@ -56,6 +57,7 @@ def get_words_idxs_in_templates(
     prefixes, suffixes = [
         tmp[: fill_idxs[i]] for i, tmp in enumerate(context_templates)
     ], [tmp[fill_idxs[i] + 2 :] for i, tmp in enumerate(context_templates)]
+    words = deepcopy(words)
 
     # Pre-process tokens
     for i, prefix in enumerate(prefixes):
@@ -136,8 +138,8 @@ def get_reprs_at_idxs(
 
         with torch.no_grad():
             with nethook.Trace(
-                model,
-                module_name,
+                module=model,
+                layer=module_name,
                 retain_input=tin,
                 retain_output=tout,
             ) as tr:
