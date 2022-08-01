@@ -81,9 +81,9 @@ for r in range(raters):
         texts = [d[t][0] for t in tl]
         job[f'page_{p+1}_fname'] = d['fname']
         job[f'page_{p+1}_counterfactual'] = counterfactual
-        for letter, text in zip('abc', texts):
+        for letter, text, t in zip('abc', texts, tl):
             job[f'page_{p+1}_passage_{letter}'] = text
-            job[f'page_{p+1}_passage_{letter}_label'] = tl
+            job[f'page_{p+1}_passage_{letter}_label'] = t
     filename = f'www/participant_{participant}.html'
     with open(filename, 'w') as f:
         f.write(template.format(**job))
