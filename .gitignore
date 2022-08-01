@@ -2,6 +2,7 @@
 results
 data
 *_tmp_*_.json
+*_kmeng01g1gn*
 
 # Pre-trained hypernetworks
 baselines/*/weights
