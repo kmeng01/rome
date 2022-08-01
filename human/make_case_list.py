@@ -12,7 +12,7 @@ with open('template.html') as f:
 
 import random
 oversample = 3
-start = 0 # First counterfactual case
+start = 50 # First counterfactual case
 cc = 50   # number of counterfactual cases
 tc = cc * oversample
 raters = 15
@@ -88,8 +88,9 @@ for r in range(raters):
     with open(filename, 'w') as f:
         f.write(template.format(**job))
     ground_truth.append(job)
+    print(f'participant_{participant}.html')
 
 # Write out ground-truth
-with open('ground_truth.json', 'w') as f:
+with open(f'ground_truth_{start}.json', 'w') as f:
     json.dump(ground_truth, f, indent=1)
 
