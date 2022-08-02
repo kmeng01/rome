@@ -12,7 +12,7 @@ with open('template.html') as f:
 
 import random
 oversample = 3
-start = 50 # First counterfactual case
+start = 0 # First counterfactual case
 cc = 50   # number of counterfactual cases
 tc = cc * oversample
 raters = 15
