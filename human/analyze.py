@@ -20,21 +20,17 @@ with open('anon_responses.csv') as f:
                     code_to_answers[pc, i, c, choice] = m
                 missing = (next(iter(set('abc') - set(most_least))))
 
-                # most_least[1:1] = [missing]
-
 with open('ground_truth_0.json') as f:
     data = json.load(f)
 
 mk = {
-        'ROME': 'rome',
-        'GPT-2 XL': 'gpt',
-        'FT_L ': 'ft_l'
+    'ROME': 'rome',
+    'GPT-2 XL': 'gpt',
+    'FT_L': 'ft_l'
 }
 case_to_ratings = defaultdict(list)
 case_to_data = defaultdict(dict)
-
-with open('dump_template.html') as f:
-    dump_template = f.read()
+label_to_ratings = defaultdict(list)
 
 for record in data:
     pc = record['participant']
@@ -44,18 +40,37 @@ for record in data:
         for a in 'abc':
             passage = record[f'page_{i+1}_passage_{a}']
             label = mk[record[f'page_{i+1}_passage_{a}_label']]
-            rating = code_to_answers.get((pc, i, 'c', a), None)
-            if rating is not None:
-                case_to_ratings[fname, 'c', label, rating].append(pc)
             case_to_data[fname]['fname'] = fname
             case_to_data[fname]['counterfactual'] = cfact
             case_to_data[fname][f'passage_{label}'] = passage
+            votes = []
+            for c in 'cf':
+                rating = code_to_answers.get((pc, i, c, a), None)
+                if rating is not None:
+                    case_to_ratings[fname, label, c, rating].append(pc)
+                    label_to_ratings[label, c, rating].append(pc)
+                for m in 'ml':
+                    voters = case_to_ratings[fname, label, c, m]
+                    if len(voters):
+                        votes.append(f'{c}{m}:' + ','.join(voters))
+            case_to_data[fname][f'votes_{label}'] = '<br>\n'.join(votes)
 
-            print(label)
+summary = {}
+for label in mk.values():
+    for c in 'cf':
+        for m in 'ml':
+            summary[f'votes_{label}_{c}{m}'] = len(label_to_ratings[label, c, m])
 
+with open('summary_template.html') as f:
+    summary_template = f.read()
+with open('dump_template.html') as f:
+    dump_template = f.read()
 
-            case_to_data[fname][f'votes_{label}'] = votes
-
-
-
-
+output = [
+    summary_template.format(**summary)
+] + [
+    dump_template.format(**case_to_data[fname])
+    for fname in sorted(case_to_data.keys())
+]
+with open('www/responses.html', 'w') as f:
+    f.write('\n'.join(output))
