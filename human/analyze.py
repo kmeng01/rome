@@ -32,6 +32,10 @@ mk = {
 case_to_ratings = defaultdict(list)
 case_to_data = defaultdict(dict)
 label_to_ratings = defaultdict(list)
+two_way_comparison = defaultdict(int)
+
+def ranking(rating):
+    return dict(m=1,n=2,l=3)[rating]
 
 for record in data:
     pc = record['participant']
@@ -47,6 +51,7 @@ for record in data:
             votes = []
             for c in 'cf':
                 rating = code_to_answers.get((pc, i, c, a), None)
+                case_to_data[fname][f'rating_{label}_{c}'] = rating
                 if rating is not None:
                     case_to_ratings[fname, label, c, rating].append(pc)
                     label_to_ratings[label, c, rating].append(pc)
@@ -55,6 +60,11 @@ for record in data:
                     if len(voters):
                         votes.append(f'{c}{m}:' + ','.join(voters))
             case_to_data[fname][f'votes_{label}'] = '<br>\n'.join(votes)
+        for c in 'cf':
+            for ea, eb in [['rome', 'ft_l'], ['rome', 'gpt'], ['ft_l', 'gpt']]:
+                if (ranking(case_to_data[fname][f'rating_{ea}_{c}'])
+                     < ranking(case_to_data[fname][f'rating_{eb}_{c}'])):
+                    two_way_comparison[f'{ea}_vs_{eb}_{c}'] += 1
 
 summary = {}
 for label in mk.values():
@@ -68,10 +78,13 @@ with open('dump_template.html') as f:
     dump_template = f.read()
 
 output = [
-    summary_template.format(**summary)
+    summary_template.format(**summary, **two_way_comparison)
 ] + [
     dump_template.format(**case_to_data[fname])
     for fname in sorted(case_to_data.keys())
+] + [
+    f'<hr>\n<pre>{json.dumps(summary, indent=1)}\n\n{json.dumps(two_way_comparison, indent=1)}</pre>'
 ]
+
 with open('www/responses.html', 'w') as f:
     f.write('\n'.join(output))
