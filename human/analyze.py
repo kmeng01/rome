@@ -19,6 +19,7 @@ with open('anon_responses.csv') as f:
                     most_least.append(choice)
                     code_to_answers[pc, i, c, choice] = m
                 missing = (next(iter(set('abc') - set(most_least))))
+                code_to_answers[pc, i, c, missing] = 'n'
 
 with open('ground_truth_0.json') as f:
     data = json.load(f)
@@ -58,7 +59,7 @@ for record in data:
 summary = {}
 for label in mk.values():
     for c in 'cf':
-        for m in 'ml':
+        for m in 'mnl':
             summary[f'votes_{label}_{c}{m}'] = len(label_to_ratings[label, c, m])
 
 with open('summary_template.html') as f:
