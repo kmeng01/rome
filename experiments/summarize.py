@@ -116,13 +116,14 @@ def main(
 
         cur_sum = {k: (np.mean(v), np.std(v)) for k, v in cur_sum.items()}
         for prefix in ["pre", "post"]:
-            k_generalization = f"{prefix}_paraphrase_success"
-            k_specificity = f"{prefix}_neighborhood_success"
-            if k_generalization in cur_sum and k_specificity in cur_sum:
-                cur_sum[f"{prefix}_score"] = (
-                    hmean([cur_sum[k_generalization][0], cur_sum[k_specificity][0]]),
-                    np.nan,
-                )
+            for k_efficacy, k_generalization, k_specificity in [(f"{prefix}_rewrite_success", f"{prefix}_paraphrase_success", f"{prefix}_neighborhood_success"), (f"{prefix}_rewrite_acc", f"{prefix}_paraphrase_acc", f"{prefix}_neighborhood_acc")]:
+                if k_generalization in cur_sum and k_specificity in cur_sum:
+                    cur_sum[f"{prefix}_score"] = (
+                        hmean([cur_sum[k_efficacy][0], cur_sum[k_generalization][0], cur_sum[k_specificity][0]]),
+                        np.nan,
+                    )
+                    break
+                
         for k, v in cur_sum.items():
             if all(exclude not in k for exclude in ["essence_score", "time"]):
                 # Constant multiplication scales linearly with mean and stddev
