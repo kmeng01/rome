@@ -1,5 +1,10 @@
 from util.hparams import HyperParams
+from dataclasses import dataclass
 
-
+@dataclass
 class EFKHyperParams(HyperParams):
-    KEYS = ["lr_scale", "n_toks", "model_name", "counterfact", "zsre"]
+    lr_scale: float
+    n_toks: int
+    model_name: str
+    counterfact: bool
+    zsre: bool
