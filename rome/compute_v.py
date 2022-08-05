@@ -177,7 +177,6 @@ def compute_v(
 
     # Retrieve cur_input, the current input to the 2nd MLP layer, and
     # cur_output, the original output of the 2nd MLP layer.
-    # TODO cur_output is redundant with target_init
     cur_input, cur_output = get_module_input_output_at_word(
         model,
         tok,
@@ -227,7 +226,7 @@ def get_module_input_output_at_word(
             words=[word], **word_repr_args
         )
     elif fact_token_strategy == "last":
-        l_input, l_output = repr_tools.get_repr_at_idxs(
+        l_input, l_output = repr_tools.get_reprs_at_idxs(
             track="both", contexts=[context_template.format(word)],
             idxs=[[-1]], **word_repr_args
         )

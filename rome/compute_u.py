@@ -92,10 +92,10 @@ def compute_u(
         # edge case (e.g. multi-token word) because the function below will
         # take the last token.
         cur_repr = repr_tools.get_reprs_at_idxs(
-            context=request["prompt"].format(request["subject"]),
-            idxs=[[-1]],
+            contexts=[templ.format(request["prompt"].format(request["subject"])) for templ in context_templates],
+            idxs=[[-1] for _ in range(len(context_templates))],
             **word_repr_args,
-        )[0]
+        ).mean(0)
         print("Selected u projection token with last token")
     else:
         raise ValueError(f"fact_token={hparams.fact_token} not recognized")
