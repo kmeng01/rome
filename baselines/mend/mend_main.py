@@ -1,11 +1,10 @@
 import os
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, List
 
 import hydra
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from util import nethook
 from util.globals import *
 
 from .algs.mend import MEND
@@ -81,7 +80,7 @@ class MendRewriteExecutor:
         self,
         model: AutoModelForCausalLM,
         tok: AutoTokenizer,
-        request: Dict,
+        requests: List[Dict],
         hparams: MENDHyperParams,
         copy=False,
         return_orig_weights=False,
@@ -98,47 +97,76 @@ class MendRewriteExecutor:
         """
 
         if not self.is_init:
-            self.init_model(model, tok, hparams)
+            self.init_model(model, tok, hparams)            
 
-        request_rewrite = deepcopy(request)
-
-        target = " " + request_rewrite["target_new"]["str"]
-        sentence = request_rewrite["prompt"].format(request_rewrite["subject"]) + target
-        target_tokens = self.tokenizer(target)["input_ids"]
-        tokens = torch.tensor(self.tokenizer(sentence)["input_ids"])[None]
-        label_tokens = tokens.clone()
-        label_tokens[0][: -len(target_tokens)] = -100
-
-        edit_inner = dict(
-            input_ids=tokens.clone().cuda(),
-            attention_mask=torch.ones_like(tokens).cuda(),
-            labels=label_tokens.clone().cuda(),
-        )
-        cond = dict(
-            input_ids=tokens.clone().cuda(),
-            attention_mask=torch.ones_like(tokens).cuda(),
-        )
-        edited_model, model_info = self.alg.edit(edit_inner, cond, return_factors=True)
-
-        mean_grads = {
-            n: torch.einsum(f"bi,bj->ij", x, delta)
-            for n, (x, delta) in model_info["factors"].items()
-        }
-        edit_lrs = self.alg.edit_lrs.detach().clone()
-
+        weights_copy = {}
         model = deepcopy(self.model) if copy else self.model
-        w_backups = {}
+
+        # Define i/o
+        targets = [
+            (" " if request["target_new"]["str"][0] != " " else "")
+            + request["target_new"]["str"]
+            for request in requests
+        ]
+        sentences = [
+            request["prompt"].format(request["subject"]) + targets[i]
+            for i, request in enumerate(requests)
+        ]
+
+        # Tokenize
+        sent_tok = self.tokenizer(sentences, padding=True, return_tensors="pt").to(
+            "cuda"
+        )
+        target_tok = self.tokenizer(targets, padding=True, return_tensors="pt").to(
+            "cuda"
+        )
+
+        # Define labels
+        label_tok = deepcopy(sent_tok["input_ids"])
+        for i in range(label_tok.size(0)):
+            target_len = target_tok["attention_mask"][i].sum()
+            padding_len = (
+                sent_tok["input_ids"].size(1) - sent_tok["attention_mask"][i].sum()
+            )
+            label_tok[i][: -target_len - padding_len] = -100
+            label_tok[i][label_tok[i] == self.tokenizer.pad_token_id] = -100
+
+        # Run MEND
+        edit_inner = dict(
+            input_ids=sent_tok["input_ids"],
+            attention_mask=sent_tok["attention_mask"],
+            labels=label_tok,
+        )
+        cond = {k: sent_tok[k] for k in ["input_ids", "attention_mask"]}
+        _, model_info = self.alg.edit(edit_inner, cond, return_factors=True)
+        factors = {
+            k + "." + n: v.detach().cpu().numpy()
+            for k, pair in model_info["factors"].items()
+            for n, v in zip("uv", pair)
+        }
+        # Also keep these learned LRs.
+        factors["edit_lrs"] = self.alg.edit_lrs.detach().cpu().numpy()
+
+        # Edit!
+        d = factors
+        torch_factors = {k: torch.tensor(v) for k, v in d.items()}
+        eli = 0
+        edit_lrs = torch_factors["edit_lrs"]
 
         with torch.no_grad():
-            for lr, (n, g) in zip(edit_lrs, mean_grads.items()):
-                cur_weight = nethook.get_parameter(model, n)
-                if return_orig_weights and n not in w_backups:
-                    w_backups[n] = cur_weight.detach().clone()
+            for n, p in model.named_parameters():
+                uname, vname = f"{n}.u", f"{n}.v"
+                if uname in torch_factors:
+                    if return_orig_weights and n not in weights_copy:
+                        weights_copy[n] = p.detach().clone()
 
-                upd_matrix = lr * g * hparams.lr_scale
-                if upd_matrix.shape != cur_weight.shape:
-                    upd_matrix = upd_matrix.T
+                    if "gpt2" in hparams.model_name:
+                        delta = torch_factors[uname].t() @ torch_factors[vname]
+                    elif "gpt-j-6B" in hparams.model_name:
+                        delta = torch_factors[vname].t() @ torch_factors[uname]
+                    else:
+                        raise ValueError("Unknown model")
+                    p.add_((delta * edit_lrs[eli] * hparams.lr_scale).to(p.device))
+                    eli += 1
 
-                cur_weight[...] += upd_matrix
-
-        return model, w_backups
+        return model, weights_copy

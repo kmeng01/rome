@@ -117,7 +117,7 @@ def main(
             edited_model, weights_copy = apply_algo(
                 model,
                 tok,
-                record["requested_rewrite"],
+                [record["requested_rewrite"]],
                 hparams,
                 copy=False,
                 return_orig_weights=True,

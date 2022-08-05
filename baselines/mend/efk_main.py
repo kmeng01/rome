@@ -1,6 +1,6 @@
 import os
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, List
 
 import hydra
 import torch
@@ -70,7 +70,7 @@ class EfkRewriteExecutor:
         self,
         model: AutoModelForCausalLM,
         tok: AutoTokenizer,
-        request: Dict,
+        requests: List[Dict],
         hparams: EFKHyperParams,
         copy=False,
         return_orig_weights=False,
@@ -83,7 +83,6 @@ class EfkRewriteExecutor:
          'relation_id': 'P39',
          'target_new': {'str': 'President', 'id': 'Q11696'},
          'target_true': {'str': 'bishop', 'id': 'Q29182'}}
-
         Returns an edited GPT model.
         """
 
@@ -93,29 +92,37 @@ class EfkRewriteExecutor:
         if not self.is_init:
             self.init_model(model, tok, hparams)
 
-        request_rewrite = deepcopy(request)
+        for request in requests:
+            self.init_model(model, tok, hparams)
+            request_rewrite = deepcopy(request)
 
-        target = " " + request_rewrite["target_new"]["str"]
-        sentence = request_rewrite["prompt"].format(request_rewrite["subject"]) + target
-        target_tokens = self.tokenizer(target)["input_ids"]
-        tokens = torch.tensor(self.tokenizer(sentence)["input_ids"])[None]
-        label_tokens = tokens.clone()
-        label_tokens[0][: -len(target_tokens)] = -100
-        edit_inner = dict(
-            input_ids=tokens.clone().cuda(),
-            attention_mask=torch.ones_like(tokens).cuda(),
-            labels=label_tokens.clone().cuda(),
-        )
-        cond = dict(
-            input_ids=tokens.clone().cuda(),
-            attention_mask=torch.ones_like(tokens).cuda(),
-        )
+            target = " " + request_rewrite["target_new"]["str"]
+            sentence = (
+                request_rewrite["prompt"].format(request_rewrite["subject"]) + target
+            )
+            target_tokens = self.tokenizer(target)["input_ids"]
+            tokens = torch.tensor(self.tokenizer(sentence)["input_ids"])[None]
+            label_tokens = tokens.clone()
+            label_tokens[0][: -len(target_tokens)] = -100
+            edit_inner = dict(
+                input_ids=tokens.clone().cuda(),
+                attention_mask=torch.ones_like(tokens).cuda(),
+                labels=label_tokens.clone().cuda(),
+            )
+            cond = dict(
+                input_ids=tokens.clone().cuda(),
+                attention_mask=torch.ones_like(tokens).cuda(),
+            )
 
-        weights_copy = {}
-        if return_orig_weights:
-            for k, v in model.named_parameters():
-                weights_copy[k] = v.detach().to(return_orig_weights_device).clone()
+            weights_copy = {}
+            if return_orig_weights:
+                for k, v in model.named_parameters():
+                    if k not in weights_copy:
+                        weights_copy[k] = (
+                            v.detach().to(return_orig_weights_device).clone()
+                        )
 
-        edited_model, model_info = self.alg.edit(edit_inner, cond, detach_history=True)
+            edited_model, _ = self.alg.edit(edit_inner, cond, detach_history=True)
+            model = edited_model.model
 
-        return edited_model.model, weights_copy
+        return model, weights_copy

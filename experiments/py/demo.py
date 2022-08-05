@@ -15,7 +15,7 @@ from baselines.ft import FTHyperParams, apply_ft_to_model
 def demo_model_editing(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    request: Dict,
+    requests: List[Dict],
     generation_prompts: List[str],
     alg_name: str = "ROME",
 ) -> Tuple[AutoModelForCausalLM, Dict[str, torch.Tensor]]:
@@ -47,7 +47,7 @@ def demo_model_editing(
 
     print_loud(f"Applying {alg_name} to model")
     model_new, orig_weights = apply_method(
-        model, tok, request, hparams, return_orig_weights=True
+        model, tok, requests, hparams, return_orig_weights=True
     )
 
     print_loud("Generating post-update text")
