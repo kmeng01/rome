@@ -47,7 +47,7 @@ def demo_model_editing(
 
     print_loud(f"Applying {alg_name} to model")
     model_new, orig_weights = apply_method(
-        model, tok, request, hparams, return_orig_weights=True
+        model, tok, [request], hparams, return_orig_weights=True
     )
 
     print_loud("Generating post-update text")

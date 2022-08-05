@@ -15,7 +15,7 @@ CONTEXT_TEMPLATES_CACHE = None
 def apply_rome_to_model(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    request: Dict,
+    requests: List[Dict],
     hparams: ROMEHyperParams,
     copy=False,
     return_orig_weights=False,
@@ -29,24 +29,26 @@ def apply_rome_to_model(
     :return: (1) the updated model, (2) an original copy of the weights that changed
     """
 
-    deltas = execute_rome(model, tok, request, hparams)
     if copy:
         model = deepcopy(model)
 
     weights_copy = {}
 
-    with torch.no_grad():
-        for w_name, (delta_u, delta_v) in deltas.items():
-            upd_matrix = delta_u.unsqueeze(1) @ delta_v.unsqueeze(0)
-            w = nethook.get_parameter(model, w_name)
-            upd_matrix = upd_matrix_match_shape(upd_matrix, w.shape)
+    for request in requests:
+        deltas = execute_rome(model, tok, request, hparams)
 
-            if return_orig_weights:
-                weights_copy[w_name] = w.detach().clone()
+        with torch.no_grad():
+            for w_name, (delta_u, delta_v) in deltas.items():
+                upd_matrix = delta_u.unsqueeze(1) @ delta_v.unsqueeze(0)
+                w = nethook.get_parameter(model, w_name)
+                upd_matrix = upd_matrix_match_shape(upd_matrix, w.shape)
 
-            w[...] += upd_matrix
+                if return_orig_weights:
+                    weights_copy[w_name] = w.detach().clone()
 
-    print(f"New weights successfully inserted into {list(deltas.keys())}")
+                w[...] += upd_matrix
+
+        print(f"New weights successfully inserted into {list(deltas.keys())}")
 
     return model, weights_copy
 
