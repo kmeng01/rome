@@ -1,5 +1,12 @@
 from util.hparams import HyperParams
+from dataclasses import dataclass
 
 
+@dataclass
 class MENDHyperParams(HyperParams):
-    KEYS = ["lr_scale", "n_toks", "model_name", "counterfact", "mini", "zsre"]
+    lr_scale: float
+    n_toks: int
+    model_name: str
+    counterfact: bool
+    mini: bool
+    zsre: bool

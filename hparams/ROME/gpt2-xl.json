@@ -1,7 +1,7 @@
 {
     "layers": [
         17
-],
+    ],
     "fact_token": "subject_last",
     "v_num_grad_steps": 20,
     "v_lr": 5e-1,

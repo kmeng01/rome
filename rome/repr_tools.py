@@ -93,7 +93,7 @@ def get_words_idxs_in_templates(
             for i in range(n)
         ]
     elif subtoken == "first":
-        return [prefixes_len[i] for i in range(n)]
+        return [[prefixes_len[i]] for i in range(n)]
     else:
         raise ValueError(f"Unknown subtoken type: {subtoken}")
 
