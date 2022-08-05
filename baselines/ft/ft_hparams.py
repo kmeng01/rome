@@ -12,6 +12,7 @@ class FTHyperParams(HyperParams):
     weight_decay: float
     kl_factor: float
     norm_constraint: float
+
     # Module templates
     rewrite_module_tmp: str
     layer_module_tmp: str
@@ -19,3 +20,6 @@ class FTHyperParams(HyperParams):
     attn_module_tmp: str
     ln_f_module: str
     lm_head_module: str
+
+    # Defaults
+    batch_size: int = 128
