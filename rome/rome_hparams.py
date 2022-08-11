@@ -1,5 +1,5 @@
 from util.hparams import HyperParams
-from typing import List, Literal
+from typing import List
 from dataclasses import dataclass
 
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class ROMEHyperParams(HyperParams):
     # Method
     layers: List[int]
-    fact_token: Literal["last", "subject_first", "subject_last", "subject_first_after_last"]
+    fact_token: str
     v_num_grad_steps: int
     v_lr: float
     v_loss_layer: int
@@ -28,4 +28,4 @@ class ROMEHyperParams(HyperParams):
     # Statistics
     mom2_dataset: str
     mom2_n_samples: int
-    mom2_dtype: Literal["float16", "float32", "float64"]
+    mom2_dtype: str
