@@ -1,9 +1,11 @@
-from typing import Dict, Tuple, List
-from matplotlib.style import context
+from typing import Dict, List, Tuple
+
 import numpy as np
-from rome import repr_tools
 import torch
+from matplotlib.style import context
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from rome import repr_tools
 from util import nethook
 
 from .rome_hparams import ROMEHyperParams
@@ -222,13 +224,18 @@ def get_module_input_output_at_word(
     if "subject_" in fact_token_strategy and fact_token_strategy.index("subject_") == 0:
         subtoken = fact_token_strategy[len("subject_") :]
         l_input, l_output = repr_tools.get_reprs_at_word_tokens(
-            track="both", subtoken=subtoken, context_templates=[context_template],
-            words=[word], **word_repr_args
+            track="both",
+            subtoken=subtoken,
+            context_templates=[context_template],
+            words=[word],
+            **word_repr_args,
         )
     elif fact_token_strategy == "last":
         l_input, l_output = repr_tools.get_reprs_at_idxs(
-            track="both", contexts=[context_template.format(word)],
-            idxs=[[-1]], **word_repr_args
+            track="both",
+            contexts=[context_template.format(word)],
+            idxs=[[-1]],
+            **word_repr_args,
         )
     else:
         raise ValueError(f"fact_token={fact_token_strategy} not recognized")

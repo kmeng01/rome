@@ -1,12 +1,15 @@
 import os
-import torch
 from pathlib import Path
+
+import torch
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from util.nethook import Trace, set_requires_grad
-from util.runningstats import CombinedStat, tally, SecondMoment, Mean, NormMean
+
 from util.globals import *
+from util.nethook import Trace, set_requires_grad
+from util.runningstats import CombinedStat, Mean, NormMean, SecondMoment, tally
+
 from .tok_dataset import (
     TokenizedDataset,
     dict_to_,

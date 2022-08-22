@@ -1,6 +1,7 @@
-import torch
 import json
 from pathlib import Path
+
+import torch
 from transformers import AutoTokenizer
 
 from util.globals import *

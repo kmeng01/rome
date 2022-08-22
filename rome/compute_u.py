@@ -1,14 +1,15 @@
 import os
-import torch
 from pathlib import Path
 from typing import Dict, List
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from rome import repr_tools
 
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from rome import repr_tools
+from util.globals import *
 
 from .layer_stats import layer_stats
 from .rome_hparams import ROMEHyperParams
-from util.globals import *
 
 # Cache variables
 inv_mom2_cache = {}
@@ -92,7 +93,10 @@ def compute_u(
         # edge case (e.g. multi-token word) because the function below will
         # take the last token.
         cur_repr = repr_tools.get_reprs_at_idxs(
-            contexts=[templ.format(request["prompt"].format(request["subject"])) for templ in context_templates],
+            contexts=[
+                templ.format(request["prompt"].format(request["subject"]))
+                for templ in context_templates
+            ],
             idxs=[[-1] for _ in range(len(context_templates))],
             **word_repr_args,
         ).mean(0)

@@ -1,8 +1,9 @@
 import collections
 import json
-from typing import List, Optional
-import numpy as np
 from pprint import pprint
+from typing import List, Optional
+
+import numpy as np
 from scipy.stats import hmean
 
 from util.globals import *
@@ -116,14 +117,31 @@ def main(
 
         cur_sum = {k: (np.mean(v), np.std(v)) for k, v in cur_sum.items()}
         for prefix in ["pre", "post"]:
-            for k_efficacy, k_generalization, k_specificity in [(f"{prefix}_rewrite_success", f"{prefix}_paraphrase_success", f"{prefix}_neighborhood_success"), (f"{prefix}_rewrite_acc", f"{prefix}_paraphrase_acc", f"{prefix}_neighborhood_acc")]:
+            for k_efficacy, k_generalization, k_specificity in [
+                (
+                    f"{prefix}_rewrite_success",
+                    f"{prefix}_paraphrase_success",
+                    f"{prefix}_neighborhood_success",
+                ),
+                (
+                    f"{prefix}_rewrite_acc",
+                    f"{prefix}_paraphrase_acc",
+                    f"{prefix}_neighborhood_acc",
+                ),
+            ]:
                 if k_generalization in cur_sum and k_specificity in cur_sum:
                     cur_sum[f"{prefix}_score"] = (
-                        hmean([cur_sum[k_efficacy][0], cur_sum[k_generalization][0], cur_sum[k_specificity][0]]),
+                        hmean(
+                            [
+                                cur_sum[k_efficacy][0],
+                                cur_sum[k_generalization][0],
+                                cur_sum[k_specificity][0],
+                            ]
+                        ),
                         np.nan,
                     )
                     break
-                
+
         for k, v in cur_sum.items():
             if all(exclude not in k for exclude in ["essence_score", "time"]):
                 # Constant multiplication scales linearly with mean and stddev

@@ -1,10 +1,11 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import os
 import json
+import os
 from typing import List
 
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from experiments.evaluate import ALG_DICT, HPARAMS_DIR
 from experiments.evaluate import main as eval_main
-from experiments.evaluate import HPARAMS_DIR, ALG_DICT
 
 TMP_PARAMS_NAME = "sweep_params_tmp_{}_.json"
 

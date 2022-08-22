@@ -1,8 +1,9 @@
-import typing
-from torch.utils.data import Dataset
-import torch
-from pathlib import Path
 import json
+import typing
+from pathlib import Path
+
+import torch
+from torch.utils.data import Dataset
 
 from util.globals import *
 

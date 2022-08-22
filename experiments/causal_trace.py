@@ -8,6 +8,7 @@ import torch
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from util import nethook
 
 
@@ -36,7 +37,7 @@ def main():
     os.makedirs(pdf_dir, exist_ok=True)
 
     # Half precision to let the 20b model fit.
-    torch_dtype = torch.float16 if '20b' in args.model_name else None
+    torch_dtype = torch.float16 if "20b" in args.model_name else None
 
     mt = ModelAndTokenizer(args.model_name, torch_dtype=torch_dtype)
 
@@ -112,7 +113,7 @@ def trace_with_patch(
     for t, l in states_to_patch:
         patch_spec[l].append(t)
 
-    embed_layername = layername(model, 0, 'embed')
+    embed_layername = layername(model, 0, "embed")
 
     def untuple(x):
         return x[0] if isinstance(x, tuple) else x
@@ -175,7 +176,7 @@ def trace_with_repatch(
     for t, l in states_to_unpatch:
         unpatch_spec[l].append(t)
 
-    embed_layername = layername(model, 0, 'embed')
+    embed_layername = layername(model, 0, "embed")
 
     def untuple(x):
         return x[0] if isinstance(x, tuple) else x
@@ -314,7 +315,11 @@ class ModelAndTokenizer:
     """
 
     def __init__(
-        self, model_name=None, model=None, tokenizer=None, low_cpu_mem_usage=False,
+        self,
+        model_name=None,
+        model=None,
+        tokenizer=None,
+        low_cpu_mem_usage=False,
         torch_dtype=None,
     ):
         if tokenizer is None:
@@ -323,17 +328,16 @@ class ModelAndTokenizer:
         if model is None:
             assert model_name is not None
             model = AutoModelForCausalLM.from_pretrained(
-                model_name, low_cpu_mem_usage=low_cpu_mem_usage,
-                torch_dtype=torch_dtype
+                model_name, low_cpu_mem_usage=low_cpu_mem_usage, torch_dtype=torch_dtype
             )
             nethook.set_requires_grad(False, model)
             model.eval().cuda()
         self.tokenizer = tokenizer
         self.model = model
         self.layer_names = [
-                n
-                for n, m in model.named_modules()
-                if (re.match(r"^(transformer|gpt_neox)\.(h|layers)\.\d+$", n))
+            n
+            for n, m in model.named_modules()
+            if (re.match(r"^(transformer|gpt_neox)\.(h|layers)\.\d+$", n))
         ]
         self.num_layers = len(self.layer_names)
 
@@ -344,18 +348,20 @@ class ModelAndTokenizer:
             f"tokenizer: {type(self.tokenizer).__name__})"
         )
 
+
 def layername(model, num, kind=None):
-    if hasattr(model, 'transformer'):
-        if kind == 'embed':
-            return 'transformer.wte'
+    if hasattr(model, "transformer"):
+        if kind == "embed":
+            return "transformer.wte"
         return f'transformer.h.{num}{"" if kind is None else "." + kind}'
-    if hasattr(model, 'gpt_neox'):
-        if kind == 'embed':
-            return 'gpt_neox.embed_in'
-        if kind == 'attn':
-            kind = 'attention'
+    if hasattr(model, "gpt_neox"):
+        if kind == "embed":
+            return "gpt_neox.embed_in"
+        if kind == "attn":
+            kind = "attention"
         return f'gpt_neox.layers.{num}{"" if kind is None else "." + kind}'
-    assert False, 'unknown transformer structure'
+    assert False, "unknown transformer structure"
+
 
 def guess_subject(prompt):
     return re.search(r"(?!Wh(o|at|ere|en|ich|y) )([A-Z]\S*)(\s[A-Z][a-z']*)*", prompt)[
@@ -403,7 +409,7 @@ def plot_trace_heatmap(result, savepdf=None, title=None, xlabel=None, modelname=
         ax.set_xticklabels(list(range(0, differences.shape[1] - 6, 5)))
         ax.set_yticklabels(labels)
         if not modelname:
-            modelname = 'GPT'
+            modelname = "GPT"
         if not kind:
             ax.set_title("Impact of restoring state after corrupted input")
             ax.set_xlabel(f"single restored layer within {modelname}")
@@ -445,7 +451,7 @@ def make_inputs(tokenizer, prompts, device="cuda"):
     attention_mask = [[0] * (maxlen - len(t)) + [1] * len(t) for t in token_lists]
     return dict(
         input_ids=torch.tensor(input_ids).to(device),
-    #    position_ids=torch.tensor(position_ids).to(device),
+        #    position_ids=torch.tensor(position_ids).to(device),
         attention_mask=torch.tensor(attention_mask).to(device),
     )
 

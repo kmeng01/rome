@@ -1,7 +1,8 @@
-import torch
+import collections
 import json
 from pathlib import Path
-import collections
+
+import torch
 
 from util.globals import *
 

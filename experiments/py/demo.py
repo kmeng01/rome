@@ -1,15 +1,15 @@
-import torch
 import os
 from pathlib import Path
+from typing import Dict, List, Tuple
+
+import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from typing import Tuple, Dict, List
 
-from util.generate import generate_fast
-from util import nethook
-from util.globals import *
-
-from rome import apply_rome_to_model, ROMEHyperParams
 from baselines.ft import FTHyperParams, apply_ft_to_model
+from rome import ROMEHyperParams, apply_rome_to_model
+from util import nethook
+from util.generate import generate_fast
+from util.globals import *
 
 
 def demo_model_editing(

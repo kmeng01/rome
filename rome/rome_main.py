@@ -1,10 +1,12 @@
-import torch
 from copy import deepcopy
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
+
+import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from util import nethook
 from util.generate import generate_fast
+
 from .compute_u import compute_u
 from .compute_v import compute_v
 from .rome_hparams import ROMEHyperParams

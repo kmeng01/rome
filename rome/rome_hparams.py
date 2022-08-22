@@ -1,6 +1,7 @@
-from util.hparams import HyperParams
-from typing import List
 from dataclasses import dataclass
+from typing import List
+
+from util.hparams import HyperParams
 
 
 @dataclass
@@ -24,7 +25,7 @@ class ROMEHyperParams(HyperParams):
     attn_module_tmp: str
     ln_f_module: str
     lm_head_module: str
-    
+
     # Statistics
     mom2_dataset: str
     mom2_n_samples: int

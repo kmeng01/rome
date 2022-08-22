@@ -1,10 +1,11 @@
-import torch
-import numpy as np
 import json
-from sklearn.feature_extraction.text import TfidfVectorizer
-from pathlib import Path
 from itertools import chain
+from pathlib import Path
+
+import numpy as np
 import scipy.sparse as sp
+import torch
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from dsets import AttributeSnippets
 from util.globals import *

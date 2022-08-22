@@ -3,10 +3,11 @@ Contains utilities for extracting token representations and indices
 from string templates. Used in computing the left and right vectors for ROME.
 """
 
+from copy import deepcopy
 from typing import List
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from copy import deepcopy
 
 from util import nethook
 

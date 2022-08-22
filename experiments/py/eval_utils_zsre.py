@@ -5,12 +5,12 @@ appropriate arguments, which returns a dictionary containing them.
 """
 
 import typing
-import numpy as np
-import torch
 from itertools import chain
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import numpy as np
+import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from dsets import AttributeSnippets
 

@@ -5,17 +5,16 @@ appropriate arguments, which returns a dictionary containing them.
 """
 
 import typing
+from itertools import chain
+
 import nltk
 import numpy as np
 import scipy
 import torch
-from itertools import chain
-
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from dsets import AttributeSnippets
-
 from util.generate import generate_fast
 from util.perplexity import perplexity
 

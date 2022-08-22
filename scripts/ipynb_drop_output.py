@@ -60,8 +60,8 @@ lets the user specify whether the ouptut of a notebook should be kept
 in the notebook's metadata, and works for IPython v3.0.
 """
 
-import sys
 import json
+import sys
 
 nb = sys.stdin.read()
 
