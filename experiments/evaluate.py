@@ -19,11 +19,9 @@ from dsets import (
     get_tfidf_vectorizer,
 )
 
-# Evaluation tools
 from experiments.py.eval_utils_counterfact import compute_rewrite_quality_counterfact
 from experiments.py.eval_utils_zsre import compute_rewrite_quality_zsre
 
-# All methods
 from rome import ROMEHyperParams, apply_rome_to_model
 from util import nethook
 from util.globals import *
