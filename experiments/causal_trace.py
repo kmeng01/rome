@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -5,32 +6,58 @@ from collections import defaultdict
 
 import numpy
 import torch
+from datasets import load_dataset
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from dsets import KnownsDataset
+from rome.tok_dataset import (
+    TokenizedDataset,
+    dict_to_,
+    flatten_masked_batch,
+    length_collation,
+)
 from util import nethook
+from util.globals import DATA_DIR
+from util.runningstats import Covariance, tally
 
 
 def main():
-    import argparse
-
     parser = argparse.ArgumentParser(description="Causal Tracing")
 
     def aa(*args, **kwargs):
         parser.add_argument(*args, **kwargs)
 
+    def parse_noise_rule(code):
+        if code in ["m", "s"]:
+            return code
+        elif re.match("^[uts][\d\.]+", code):
+            return code
+        else:
+            return float(code)
+
     aa(
         "--model_name",
         default="gpt2-xl",
-        choices=["gpt2-xl", "EleutherAI/gpt-j-6B", "EleutherAI/gpt-neox-20b"],
+        choices=[
+            "gpt2-xl",
+            "EleutherAI/gpt-j-6B",
+            "EleutherAI/gpt-neox-20b",
+            "gpt2-large",
+            "gpt2-medium",
+            "gpt2",
+        ],
     )
-    aa("--fact_file", default="counterfact/compiled/known_1000.json")
+    aa("--fact_file", default=None)
     aa("--output_dir", default="results/{model_name}/causal_trace")
-    aa("--noise_level", default=0.1, type=float)
+    aa("--noise_level", default="s3", type=parse_noise_rule)
+    aa("--replace", default=0, type=int)
     args = parser.parse_args()
 
-    output_dir = args.output_dir.format(model_name=args.model_name.replace("/", "_"))
+    modeldir = f'r{args.replace}_{args.model_name.replace("/", "_")}'
+    modeldir = f"n{args.noise_level}_" + modeldir
+    output_dir = args.output_dir.format(model_name=modeldir)
     result_dir = f"{output_dir}/cases"
     pdf_dir = f"{output_dir}/pdfs"
     os.makedirs(result_dir, exist_ok=True)
@@ -41,8 +68,33 @@ def main():
 
     mt = ModelAndTokenizer(args.model_name, torch_dtype=torch_dtype)
 
-    with open(args.fact_file) as f:
-        knowns = json.load(f)
+    if args.fact_file is None:
+        knowns = KnownsDataset(DATA_DIR)
+    else:
+        with open(args.fact_file) as f:
+            knowns = json.load(f)
+
+    noise_level = args.noise_level
+    uniform_noise = False
+    if isinstance(noise_level, str):
+        if noise_level.startswith("s"):
+            # Automatic spherical gaussian
+            factor = float(noise_level[1:]) if len(noise_level) > 1 else 1.0
+            noise_level = factor * collect_embedding_std(
+                mt, [k["subject"] for k in knowns]
+            )
+            print(f"Using noise_level {noise_level} to match model times {factor}")
+        elif noise_level == "m":
+            # Automatic multivariate gaussian
+            noise_level = collect_embedding_gaussian(mt)
+            print(f"Using multivariate gaussian to match model noise")
+        elif noise_level.startswith("t"):
+            # Automatic d-distribution with d degrees of freedom
+            degrees = float(noise_level[1:])
+            noise_level = collect_embedding_tdist(mt, degrees)
+        elif noise_level.startswith("u"):
+            uniform_noise = True
+            noise_level = float(noise_level[1:])
 
     for knowledge in tqdm(knowns):
         known_id = knowledge["known_id"]
@@ -56,7 +108,9 @@ def main():
                     knowledge["subject"],
                     expect=knowledge["attribute"],
                     kind=kind,
-                    noise=args.noise_level,
+                    noise=noise_level,
+                    uniform_noise=uniform_noise,
+                    replace=args.replace,
                 )
                 numpy_result = {
                     k: v.detach().cpu().numpy() if torch.is_tensor(v) else v
@@ -65,7 +119,7 @@ def main():
                 numpy.savez(filename, **numpy_result)
             else:
                 numpy_result = numpy.load(filename, allow_pickle=True)
-            if not result["correct_prediction"]:
+            if not numpy_result["correct_prediction"]:
                 tqdm.write(f"Skipping {knowledge['prompt']}")
                 continue
             plot_result = dict(numpy_result)
@@ -83,6 +137,8 @@ def trace_with_patch(
     answers_t,  # Answer probabilities to collect
     tokens_to_mix,  # Range of tokens to corrupt (begin, end)
     noise=0.1,  # Level of noise to add
+    uniform_noise=False,
+    replace=False,  # True to replace with instead of add noise
     trace_layers=None,  # List of traced outputs to return
 ):
     """
@@ -108,7 +164,12 @@ def trace_with_patch(
     any number of token indices and layers can be listed.
     """
 
-    prng = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+    rs = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+    if uniform_noise:
+        prng = lambda *shape: rs.uniform(-1, 1, shape)
+    else:
+        prng = lambda *shape: rs.randn(*shape)
+
     patch_spec = defaultdict(list)
     for t, l in states_to_patch:
         patch_spec[l].append(t)
@@ -119,14 +180,23 @@ def trace_with_patch(
         return x[0] if isinstance(x, tuple) else x
 
     # Define the model-patching rule.
+    if isinstance(noise, float):
+        noise_fn = lambda x: noise * x
+    else:
+        noise_fn = noise
+
     def patch_rep(x, layer):
         if layer == embed_layername:
             # If requested, we corrupt a range of token embeddings on batch items x[1:]
             if tokens_to_mix is not None:
                 b, e = tokens_to_mix
-                x[1:, b:e] += noise * torch.from_numpy(
-                    prng.randn(x.shape[0] - 1, e - b, x.shape[2])
+                noise_data = noise_fn(
+                    torch.from_numpy(prng(x.shape[0] - 1, e - b, x.shape[2]))
                 ).to(x.device)
+                if replace:
+                    x[1:, b:e] = noise_data
+                else:
+                    x[1:, b:e] += noise_data
             return x
         if layer not in patch_spec:
             return x
@@ -167,8 +237,13 @@ def trace_with_repatch(
     answers_t,  # Answer probabilities to collect
     tokens_to_mix,  # Range of tokens to corrupt (begin, end)
     noise=0.1,  # Level of noise to add
+    uniform_noise=False,
 ):
-    prng = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+    rs = numpy.random.RandomState(1)  # For reproducibility, use pseudorandom noise
+    if uniform_noise:
+        prng = lambda *shape: rs.uniform(-1, 1, shape)
+    else:
+        prng = lambda *shape: rs.randn(*shape)
     patch_spec = defaultdict(list)
     for t, l in states_to_patch:
         patch_spec[l].append(t)
@@ -188,7 +263,7 @@ def trace_with_repatch(
             if tokens_to_mix is not None:
                 b, e = tokens_to_mix
                 x[1:, b:e] += noise * torch.from_numpy(
-                    prng.randn(x.shape[0] - 1, e - b, x.shape[2])
+                    prng(x.shape[0] - 1, e - b, x.shape[2])
                 ).to(x.device)
             return x
         if first_pass or (layer not in patch_spec and layer not in unpatch_spec):
@@ -220,7 +295,17 @@ def trace_with_repatch(
 
 
 def calculate_hidden_flow(
-    mt, prompt, subject, samples=10, noise=0.1, window=10, kind=None, expect=None
+    mt,
+    prompt,
+    subject,
+    samples=10,
+    noise=0.1,
+    token_range=None,
+    uniform_noise=False,
+    replace=False,
+    window=10,
+    kind=None,
+    expect=None,
 ):
     """
     Runs causal tracing over every token/layer combination in the network
@@ -233,12 +318,24 @@ def calculate_hidden_flow(
     if expect is not None and answer.strip() != expect:
         return dict(correct_prediction=False)
     e_range = find_token_range(mt.tokenizer, inp["input_ids"][0], subject)
+    if token_range == "subject_last":
+        token_range = [e_range[1] - 1]
+    elif token_range is not None:
+        raise ValueError(f"Unknown token_range: {token_range}")
     low_score = trace_with_patch(
-        mt.model, inp, [], answer_t, e_range, noise=noise
+        mt.model, inp, [], answer_t, e_range, noise=noise, uniform_noise=uniform_noise
     ).item()
     if not kind:
         differences = trace_important_states(
-            mt.model, mt.num_layers, inp, e_range, answer_t, noise=noise
+            mt.model,
+            mt.num_layers,
+            inp,
+            e_range,
+            answer_t,
+            noise=noise,
+            uniform_noise=uniform_noise,
+            replace=replace,
+            token_range=token_range,
         )
     else:
         differences = trace_important_window(
@@ -248,8 +345,11 @@ def calculate_hidden_flow(
             e_range,
             answer_t,
             noise=noise,
+            uniform_noise=uniform_noise,
+            replace=replace,
             window=window,
             kind=kind,
+            token_range=token_range,
         )
     differences = differences.detach().cpu()
     return dict(
@@ -266,10 +366,23 @@ def calculate_hidden_flow(
     )
 
 
-def trace_important_states(model, num_layers, inp, e_range, answer_t, noise=0.1):
+def trace_important_states(
+    model,
+    num_layers,
+    inp,
+    e_range,
+    answer_t,
+    noise=0.1,
+    uniform_noise=False,
+    replace=False,
+    token_range=None,
+):
     ntoks = inp["input_ids"].shape[1]
     table = []
-    for tnum in range(ntoks):
+
+    if token_range is None:
+        token_range = range(ntoks)
+    for tnum in token_range:
         row = []
         for layer in range(num_layers):
             r = trace_with_patch(
@@ -279,6 +392,8 @@ def trace_important_states(model, num_layers, inp, e_range, answer_t, noise=0.1)
                 answer_t,
                 tokens_to_mix=e_range,
                 noise=noise,
+                uniform_noise=uniform_noise,
+                replace=replace,
             )
             row.append(r)
         table.append(torch.stack(row))
@@ -286,11 +401,24 @@ def trace_important_states(model, num_layers, inp, e_range, answer_t, noise=0.1)
 
 
 def trace_important_window(
-    model, num_layers, inp, e_range, answer_t, kind, window=10, noise=0.1
+    model,
+    num_layers,
+    inp,
+    e_range,
+    answer_t,
+    kind,
+    window=10,
+    noise=0.1,
+    uniform_noise=False,
+    replace=False,
+    token_range=None,
 ):
     ntoks = inp["input_ids"].shape[1]
     table = []
-    for tnum in range(ntoks):
+
+    if token_range is None:
+        token_range = range(ntoks)
+    for tnum in token_range:
         row = []
         for layer in range(num_layers):
             layerlist = [
@@ -300,7 +428,14 @@ def trace_important_window(
                 )
             ]
             r = trace_with_patch(
-                model, inp, layerlist, answer_t, tokens_to_mix=e_range, noise=noise
+                model,
+                inp,
+                layerlist,
+                answer_t,
+                tokens_to_mix=e_range,
+                noise=noise,
+                uniform_noise=uniform_noise,
+                replace=replace,
             )
             row.append(r)
         table.append(torch.stack(row))
@@ -370,12 +505,27 @@ def guess_subject(prompt):
 
 
 def plot_hidden_flow(
-    mt, prompt, subject=None, samples=10, noise=0.1, window=10, kind=None, savepdf=None
+    mt,
+    prompt,
+    subject=None,
+    samples=10,
+    noise=0.1,
+    uniform_noise=False,
+    window=10,
+    kind=None,
+    savepdf=None,
 ):
     if subject is None:
         subject = guess_subject(prompt)
     result = calculate_hidden_flow(
-        mt, prompt, subject, samples=samples, noise=noise, window=window, kind=kind
+        mt,
+        prompt,
+        subject,
+        samples=samples,
+        noise=noise,
+        uniform_noise=uniform_noise,
+        window=window,
+        kind=kind,
     )
     plot_trace_heatmap(result, savepdf)
 
@@ -492,6 +642,109 @@ def predict_from_input(model, inp):
     probs = torch.softmax(out[:, -1], dim=1)
     p, preds = torch.max(probs, dim=1)
     return preds, p
+
+
+def collect_embedding_std(mt, subjects):
+    alldata = []
+    for s in subjects:
+        inp = make_inputs(mt.tokenizer, [s])
+        with nethook.Trace(mt.model, layername(mt.model, 0, "embed")) as t:
+            mt.model(**inp)
+            alldata.append(t.output[0])
+    alldata = torch.cat(alldata)
+    noise_level = alldata.std().item()
+    return noise_level
+
+
+def get_embedding_cov(mt):
+    model = mt.model
+    tokenizer = mt.tokenizer
+
+    def get_ds():
+        ds_name = "wikitext"
+        raw_ds = load_dataset(
+            ds_name,
+            dict(wikitext="wikitext-103-raw-v1", wikipedia="20200501.en")[ds_name],
+        )
+        try:
+            maxlen = model.config.n_positions
+        except:
+            maxlen = 100  # Hack due to missing setting in GPT2-NeoX.
+        return TokenizedDataset(raw_ds["train"], tokenizer, maxlen=maxlen)
+
+    ds = get_ds()
+    sample_size = 1000
+    batch_size = 5
+    filename = None
+    batch_tokens = 100
+
+    progress = lambda x, **k: x
+
+    stat = Covariance()
+    loader = tally(
+        stat,
+        ds,
+        cache=filename,
+        sample_size=sample_size,
+        batch_size=batch_size,
+        collate_fn=length_collation(batch_tokens),
+        pin_memory=True,
+        random_sample=1,
+        num_workers=0,
+    )
+    with torch.no_grad():
+        for batch_group in loader:
+            for batch in batch_group:
+                batch = dict_to_(batch, "cuda")
+                del batch["position_ids"]
+                with nethook.Trace(model, layername(mt.model, 0, "embed")) as tr:
+                    model(**batch)
+                feats = flatten_masked_batch(tr.output, batch["attention_mask"])
+                stat.add(feats.cpu().double())
+    return stat.mean(), stat.covariance()
+
+
+def make_generator_transform(mean=None, cov=None):
+    d = len(mean) if mean is not None else len(cov)
+    device = mean.device if mean is not None else cov.device
+    layer = torch.nn.Linear(d, d, dtype=torch.double)
+    nethook.set_requires_grad(False, layer)
+    layer.to(device)
+    layer.bias[...] = 0 if mean is None else mean
+    if cov is None:
+        layer.weight[...] = torch.eye(d).to(device)
+    else:
+        _, s, v = cov.svd()
+        w = s.sqrt()[None, :] * v
+        layer.weight[...] = w
+    return layer
+
+
+def collect_embedding_gaussian(mt):
+    m, c = get_embedding_cov(mt)
+    return make_generator_transform(m, c)
+
+
+def collect_embedding_tdist(mt, degree=3):
+    # We will sample sqrt(degree / u) * sample, where u is from the chi2[degree] dist.
+    # And this will give us variance is (degree / degree - 2) * cov.
+    # Therefore if we want to match the sample variance, we should
+    # reduce cov by a factor of (degree - 2) / degree.
+    # In other words we should be sampling sqrt(degree - 2 / u) * sample.
+    u_sample = torch.from_numpy(
+        numpy.random.RandomState(2).chisquare(df=degree, size=1000)
+    )
+    fixed_sample = ((degree - 2) / u_sample).sqrt()
+    mvg = collect_embedding_gaussian(mt)
+
+    def normal_to_student(x):
+        gauss = mvg(x)
+        size = gauss.shape[:-1].numel()
+        factor = fixed_sample[:size].reshape(gauss.shape[:-1] + (1,))
+        student = factor * gauss
+        return student
+
+    return normal_to_student
 
 
 if __name__ == "__main__":
