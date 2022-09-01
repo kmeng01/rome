@@ -1,12 +1,13 @@
 # plot Figure 3 + 4 from the paper -
 # the decreasing ratio of the probability of the correct answer after suppressing knowledge neurons
 
-from glob import glob
-import json
-import seaborn as sns
-import pandas as pd
-from pathlib import Path
 import argparse
+import json
+from glob import glob
+from pathlib import Path
+
+import pandas as pd
+import seaborn as sns
 
 
 def format_data(results_data, key="suppression"):

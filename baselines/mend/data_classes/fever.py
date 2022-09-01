@@ -1,10 +1,10 @@
+import random
+
 import jsonlines
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 from utils import EditBatchSampler, dict_to
-import random
-
 
 POSITIVE_CLASS = "SUPPORTS"
 

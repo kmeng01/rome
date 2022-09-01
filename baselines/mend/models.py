@@ -1,10 +1,11 @@
-import transformers
+import logging
+import re
+
 import torch
 import torch.nn as nn
-import re
-import logging
-from .utils import scr
+import transformers
 
+from .utils import scr
 
 LOG = logging.getLogger(__name__)
 

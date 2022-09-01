@@ -9,19 +9,19 @@
 }
 """
 
-import torch
 import copy
+import logging
+
 import higher
+import torch
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.seq2vec_encoders import PytorchSeq2VecWrapper
-import logging
-from .mend import monkeypatch as make_functional
-
-from ..editable_model import EditableModel
-from ..utils import _logits, _inner_params
-from ..models import BertClassifier
 from transformers import BartForConditionalGeneration, T5ForConditionalGeneration
 
+from ..editable_model import EditableModel
+from ..models import BertClassifier
+from ..utils import _inner_params, _logits
+from .mend import monkeypatch as make_functional
 
 LOG = logging.getLogger(__name__)
 
@@ -303,8 +303,9 @@ class OneShotLearner(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    import transformers
     import types
+
+    import transformers
 
     model = transformers.GPT2LMHeadModel.from_pretrained("gpt2")
 

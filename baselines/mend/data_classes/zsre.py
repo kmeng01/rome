@@ -1,10 +1,11 @@
-import jsonlines
-from torch.utils.data import Dataset
-import random
-from utils import EditBatchSampler, dict_to
-import torch
-from transformers import BartTokenizerFast, BartTokenizer
 import logging
+import random
+
+import jsonlines
+import torch
+from torch.utils.data import Dataset
+from transformers import BartTokenizer, BartTokenizerFast
+from utils import EditBatchSampler, dict_to
 
 LOG = logging.getLogger(__name__)
 

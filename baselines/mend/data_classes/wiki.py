@@ -1,10 +1,11 @@
-from torch.utils.data import Dataset
-from datasets import load_dataset
+import copy
 import json
-from utils import EditBatchSampler, dict_to, scr
 import logging
 import random
-import copy
+
+from datasets import load_dataset
+from torch.utils.data import Dataset
+from utils import EditBatchSampler, dict_to, scr
 
 LOG = logging.getLogger(__name__)
 

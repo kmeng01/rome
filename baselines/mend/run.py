@@ -1,18 +1,15 @@
 import copy
-import random
 import importlib
 import logging
+import random
 
 import hydra
-from omegaconf import OmegaConf
+import models
 import numpy as np
 import torch
 import utils
-
-
+from omegaconf import OmegaConf
 from trainer import EditTrainer
-import models
-
 
 OmegaConf.register_new_resolver("uuid", lambda: utils.uuid())
 

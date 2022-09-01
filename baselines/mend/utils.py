@@ -1,15 +1,15 @@
 import datetime
-import typing
-import numpy as np
-import struct
-import os
 import getpass
-import hydra
 import logging
-import torch
-from collections import defaultdict
 import math
+import os
+import struct
+import typing
+from collections import defaultdict
 
+import hydra
+import numpy as np
+import torch
 
 LOG = logging.getLogger(__name__)
 

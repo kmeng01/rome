@@ -1,7 +1,7 @@
+import logging
+
 import torch
 import torch.nn as nn
-
-import logging
 
 LOG = logging.getLogger(__name__)
 

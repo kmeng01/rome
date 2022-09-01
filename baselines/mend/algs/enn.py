@@ -1,7 +1,6 @@
+import higher
 import torch
 import torch.nn as nn
-import higher
-
 from editable_model import EditableModel
 from utils import _logits
 
@@ -82,9 +81,10 @@ class ENN(EditableModel):
 
 
 def test():
-    import transformers
-    import types
     import copy
+    import types
+
+    import transformers
 
     model = transformers.GPT2LMHeadModel.from_pretrained("gpt2")
 

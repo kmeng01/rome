@@ -1,12 +1,13 @@
 from transformers import (
-    BertTokenizer,
     BertLMHeadModel,
-    GPT2Tokenizer,
+    BertTokenizer,
     GPT2LMHeadModel,
+    GPT2Tokenizer,
     GPTNeoForCausalLM,
 )
+
+from .data import PARAREL_RELATION_NAMES, pararel, pararel_expanded
 from .knowledge_neurons import KnowledgeNeurons
-from .data import pararel, pararel_expanded, PARAREL_RELATION_NAMES
 
 BERT_MODELS = ["bert-base-uncased", "bert-base-multilingual-uncased"]
 GPT2_MODELS = ["gpt2", "gpt2-xl"]

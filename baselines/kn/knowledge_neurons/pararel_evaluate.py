@@ -1,20 +1,21 @@
 # launch with `python -m torch.distributed.launch --nproc_per_node=NUM_GPUS_YOU_HAVE pararel_evaluate.py`
 
+import argparse
+import json
+import os
+import random
+from functools import lru_cache
+from pathlib import Path
+
+import torch
 from knowledge_neurons import (
+    ALL_MODELS,
     KnowledgeNeurons,
     initialize_model_and_tokenizer,
     model_type,
     pararel_expanded,
-    ALL_MODELS,
 )
-import random
-from functools import lru_cache
 from tqdm import tqdm
-import json
-import argparse
-import torch
-from pathlib import Path
-import os
 
 if __name__ == "__main__":
     # parse arguments

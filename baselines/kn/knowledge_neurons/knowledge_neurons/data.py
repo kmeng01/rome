@@ -1,9 +1,10 @@
-import json
-import urllib.request
 import collections
-from tqdm import tqdm
-from pathlib import Path
+import json
 import os
+import urllib.request
+from pathlib import Path
+
+from tqdm import tqdm
 
 PARAREL_RELATION_NAMES = [
     "P39",

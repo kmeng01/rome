@@ -1,7 +1,8 @@
-from higher.patch import monkeypatch as make_functional
 from copy import deepcopy
+
 import torch
 import torch.nn as nn
+from higher.patch import monkeypatch as make_functional
 from losses import kl_loc_loss, masked_log_probs
 
 

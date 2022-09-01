@@ -1,9 +1,10 @@
+import random
+
 from knowledge_neurons import (
     KnowledgeNeurons,
     initialize_model_and_tokenizer,
     model_type,
 )
-import random
 
 
 def test_gpt(MODEL_NAME: str):

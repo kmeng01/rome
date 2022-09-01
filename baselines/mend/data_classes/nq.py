@@ -22,8 +22,9 @@ class NQDataset:
         capitalize: bool = True,
         question_mark: bool = True,
     ):
-        import datasets
         import os
+
+        import datasets
 
         def process(text):
             if capitalize:

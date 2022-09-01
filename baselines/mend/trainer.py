@@ -1,27 +1,24 @@
+import json
 import logging
 import os
 import shutil
 import tempfile
 import time
-import json
 
 import torch
-from torch.utils.data import Dataset
-from omegaconf import OmegaConf
-
-import wandb
-
-from losses import kl_loc_loss
 import utils
+import wandb
+from losses import kl_loc_loss
+from omegaconf import OmegaConf
+from torch.utils.data import Dataset
 from utils import (
-    _logits,
-    safe_backward,
-    RunningStatAverager,
     EarlyStopper,
+    RunningStatAverager,
+    _logits,
     formatted_timestamp,
+    safe_backward,
     time_delta_seconds,
 )
-
 
 LOG = logging.getLogger(__name__)
 

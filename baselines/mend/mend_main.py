@@ -5,6 +5,7 @@ from typing import Dict, List
 import hydra
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from util.globals import *
 
 from .algs.mend import MEND
@@ -97,7 +98,7 @@ class MendRewriteExecutor:
         """
 
         if not self.is_init:
-            self.init_model(model, tok, hparams)            
+            self.init_model(model, tok, hparams)
 
         weights_copy = {}
         model = deepcopy(self.model) if copy else self.model

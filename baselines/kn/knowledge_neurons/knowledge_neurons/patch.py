@@ -1,11 +1,10 @@
 # helper functions for patching torch transformer models
+import collections
+from typing import Callable, List
+
 import torch
 import torch.nn as nn
-import collections
-from typing import List, Callable
-import torch
 import torch.nn.functional as F
-import collections
 
 
 def get_attributes(x: nn.Module, attributes: str):

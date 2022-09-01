@@ -1,19 +1,25 @@
+import copy
+import logging
+from collections import defaultdict
+
+import higher
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import copy
 import transformers
-import higher
-import logging
-from higher.patch import make_functional
-from collections import defaultdict
+from higher.patch import (
+    _MonkeyPatchBase,
+    _torch,
+    _typing,
+    _utils,
+    buffer_sync,
+    make_functional,
+)
 
-from higher.patch import _MonkeyPatchBase, _torch, _typing, _utils, buffer_sync
-
+from .. import nn as local_nn
 from ..editable_model import EditableModel
 from ..hooks import hook_model
-from .. import nn as local_nn
-from ..utils import _logits, _inner_params
+from ..utils import _inner_params, _logits
 
 LOG = logging.getLogger(__name__)
 

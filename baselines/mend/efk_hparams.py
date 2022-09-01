@@ -1,5 +1,7 @@
-from util.hparams import HyperParams
 from dataclasses import dataclass
+
+from util.hparams import HyperParams
+
 
 @dataclass
 class EFKHyperParams(HyperParams):

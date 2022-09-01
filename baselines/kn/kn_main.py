@@ -1,15 +1,12 @@
-import torch
 from copy import deepcopy
-from typing import Tuple, List, Dict
+from typing import Dict, List, Tuple
+
 import numpy as np
+import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .knowledge_neurons.knowledge_neurons import (
-    KnowledgeNeurons,
-    model_type,
-)
-
 from .kn_hparams import KNHyperParams
+from .knowledge_neurons.knowledge_neurons import KnowledgeNeurons, model_type
 
 
 def apply_kn_to_model(

@@ -1,19 +1,17 @@
 # main knowledge neurons class
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
-import einops
-from tqdm import tqdm
-import numpy as np
-import collections
-from typing import List, Optional, Tuple, Callable
-import torch
-import torch.nn.functional as F
-import einops
 import collections
 import math
 from functools import partial
+from typing import Callable, List, Optional, Tuple
+
+import einops
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from tqdm import tqdm
 from transformers import PreTrainedTokenizerBase
+
 from .patch import *
 
 
