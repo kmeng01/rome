@@ -25,16 +25,6 @@ def compute_v(
     Runs a simple optimization procedure.
     """
 
-    # Get model parameters
-    lm_w, ln_f = (
-        nethook.get_parameter(model, f"{hparams.lm_head_module}.weight").T,
-        nethook.get_module(model, hparams.ln_f_module),
-    )
-    try:
-        lm_b = nethook.get_parameter(model, f"{hparams.lm_head_module}.bias")
-    except LookupError as _:
-        lm_b = next(model.parameters()).new_zeros(model.config.vocab_size)
-
     print("Computing right vector (v)")
 
     # Tokenize target into list of int token IDs
@@ -132,10 +122,8 @@ def compute_v(
                 kl_distr_init = kl_log_probs.detach().clone()
 
         # Compute loss on rewriting targets
-        full_repr = tr[hparams.layer_module_tmp.format(loss_layer)].output[0][
-            : len(rewriting_prompts)
-        ]
-        log_probs = torch.log_softmax(ln_f(full_repr) @ lm_w + lm_b, dim=2)
+        log_probs = torch.log_softmax(logits, dim=2)
+
         loss = torch.gather(
             log_probs,
             2,
