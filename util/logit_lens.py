@@ -33,14 +33,10 @@ class LogitLens:
         self.model, self.tok = model, tok
         self.n_layers = self.model.config.n_layer
 
-        self.lm_w, self.ln_f = (
-            nethook.get_parameter(model, f"{lm_head_module}.weight").T,
+        self.lm_head, self.ln_f = (
+            nethook.get_module(model, lm_head_module),
             nethook.get_module(model, ln_f_module),
         )
-        try:
-            self.lm_b = nethook.get_parameter(model, f"{lm_head_module}.bias")
-        except LookupError:
-            self.lm_b = next(model.parameters()).new_zeros(model.config.vocab_size)
 
         self.output: Optional[Dict] = None
         self.td: Optional[nethook.TraceDict] = None
@@ -73,8 +69,7 @@ class LogitLens:
                 ), "Make sure you're only running LogitLens on single generations only."
 
                 self.output[layer] = torch.softmax(
-                    self.ln_f(cur_out[:, -1]) @ self.lm_w + self.lm_b,
-                    dim=1,
+                    self.lm_head(self.ln_f(cur_out[:, -1, :])), dim=1
                 )
 
         return self.output

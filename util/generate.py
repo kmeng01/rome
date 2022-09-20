@@ -16,7 +16,7 @@ def generate_interactive(
     use_logit_lens: bool = False,
     layer_module_tmp: str = "transformer.h.{}",
     ln_f_module: str = "transformer.ln_f",
-    lm_head_module: str = "transformer.wte",
+    lm_head_module: str = "lm_head",
 ):
     """
     Puts generation in a loop. Allows users to repeatedly provide inputs
