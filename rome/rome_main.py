@@ -36,7 +36,7 @@ def apply_rome_to_model(
 
     weights_copy = {}
 
-    for request in requests:
+    for i, request in enumerate(requests):
         deltas = execute_rome(model, tok, request, hparams)
 
         with torch.no_grad():
@@ -45,7 +45,8 @@ def apply_rome_to_model(
                 w = nethook.get_parameter(model, w_name)
                 upd_matrix = upd_matrix_match_shape(upd_matrix, w.shape)
 
-                if return_orig_weights:
+                if return_orig_weights and w_name not in weights_copy:
+                    assert i == 0
                     weights_copy[w_name] = w.detach().clone()
 
                 w[...] += upd_matrix
