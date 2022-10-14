@@ -155,7 +155,8 @@ python3 -m experiments/summarize --alg_name=ROME --run_name=run_001
 @article{meng2022locating,
   title={Locating and Editing Factual Associations in {GPT}},
   author={Kevin Meng and David Bau and Alex Andonian and Yonatan Belinkov},
-  journal={arXiv preprint arXiv:2202.05262},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
   year={2022}
 }
 ```
