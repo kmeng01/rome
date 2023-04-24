@@ -25,7 +25,7 @@ if (!(Test-Path $CUDA_DIR -PathType Container)) {
 
 # Uninstall existing environment
 # conda deactivate
-# conda env remove --name $ENV_NAME
+conda env remove --name $ENV_NAME
 
 # Build new environment: torch and torch vision from source
 # CUDA_HOME is needed
