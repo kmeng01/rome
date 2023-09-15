@@ -1,3 +1,5 @@
 datasets==1.18.3
 python-dotenv==0.19.2
 git+https://github.com/kmeng01/transformers-colab@allennlp-compat
+transformers==4.33.1
+accelerate==0.23.0
