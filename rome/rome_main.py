@@ -78,10 +78,9 @@ def execute_rome(
         f"[{request['prompt'].format(request['subject'])}] -> [{request['target_new']['str']}]"
     )
 
-    if 'score' in request and 'subject_range' in request:
-        scores = torch.Tensor(request["scores"])
-        end_idx = request["subject_range"][1]
-        layers = [torch.argmax(scores[end_idx])]
+    if 'max_score_layer' in request:
+        # only edit at max-score-layer
+        layers = request['max_score_layer']
     else:
         layers = hparams.layers
 
