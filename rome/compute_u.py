@@ -64,7 +64,7 @@ def compute_u(
     context_templates: List[str],
 ) -> torch.Tensor:
     """
-    Computes the right vector used in constructing the rank-1 update matrix.
+    Computes the left (key) vector used in constructing the rank-1 update matrix.
     """
 
     print("Computing left vector (u)...")
