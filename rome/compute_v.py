@@ -18,6 +18,7 @@ def compute_v(
     hparams: ROMEHyperParams,
     layer: int,
     left_vector: torch.Tensor,
+    k_star: torch.Tensor,
     context_templates: List[str],
 ) -> torch.Tensor:
     """
@@ -165,9 +166,8 @@ def compute_v(
 
     target = target_init + delta
 
-    # Retrieve cur_input, the current input to the 2nd MLP layer, and
-    # cur_output, the original output of the 2nd MLP layer.
-    cur_input, cur_output = get_module_input_output_at_word(
+    # Retrieve cur_output, the original output of the 2nd MLP layer.
+    _, cur_output = get_module_input_output_at_word(
         model,
         tok,
         layer,
@@ -178,12 +178,12 @@ def compute_v(
     )
 
     # Solving the linear system to compute the right vector
-    right_vector = (target - cur_output) / torch.dot(cur_input, left_vector)
+    right_vector = (target - cur_output) / torch.dot(k_star, left_vector)
     print(f"Delta norm: {(target - cur_output).norm().item()}")
     print(
         f"Change in target norm: {target_init.norm().item()} to {target.norm().item()} => {(target.norm() - target_init.norm()).item()}"
     )
-    print(f"Division Factor: {torch.dot(cur_input, left_vector).item()}")
+    print(f"Division Factor: {torch.dot(k_star, left_vector).item()}")
     print(f"Right vector norm: {right_vector.norm()}")
 
     return right_vector

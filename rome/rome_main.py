@@ -91,7 +91,9 @@ def execute_rome(
     deltas = {}
     for layer in sorted(hparams.layers):
         # Compute rank-1 update matrix
-        left_vector: torch.Tensor = compute_u(
+        left_vector: torch.Tensor
+        k_star: torch.Tensor
+        left_vector, k_star = compute_u(
             model,
             tok,
             request,
@@ -107,6 +109,7 @@ def execute_rome(
             hparams,
             layer,
             left_vector,
+            k_star,
             get_context_templates(model, tok, hparams.context_template_length_params),
         )
         print("Right vector shape:", right_vector.shape)
