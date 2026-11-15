@@ -34,6 +34,7 @@ def main(
                     data = json.load(f)
             except json.JSONDecodeError:
                 print(f"Could not decode {case_file} due to format error; skipping.")
+                continue
 
             case_id = data["case_id"]
             if first_n_cases is not None and case_id >= first_n_cases:
