@@ -12,7 +12,7 @@ from .knowledge_neurons.knowledge_neurons import KnowledgeNeurons, model_type
 def apply_kn_to_model(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    request: Dict,
+    requests: List[Dict],
     hparams: KNHyperParams,
     copy=False,
     return_orig_weights=False,
@@ -24,7 +24,8 @@ def apply_kn_to_model(
         model_type=model_type(hparams.model_name),
         device="cuda",
     )
-    request_rewrite = deepcopy(request)
+    assert len(requests) == 1, "KN supports only one request at a time"
+    request_rewrite = deepcopy(requests[0])
     text = [request_rewrite["prompt"].format(request_rewrite["subject"])]
     ground_truth = request_rewrite["target_true"]["str"]
     target = request_rewrite["target_new"]["str"]
